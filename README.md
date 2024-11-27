@@ -5,9 +5,9 @@ PMS is essentially a minimal package manager. Okay, not really, for now, it just
 Being a gigachad LFS user, I felt it was time to start making my own package manager, and with the firey passion to do something in C, pms came into fruition.
 ### Where the name originates
 I have to give credit because the name pms originally came from Learnix's discord server from a **very** active member of the community, if you want to know him, you will have to 👊 SMASH 👊 THAT SUBSCRIBE BUTTON and join LearnixTV's discord server 😜.
-As also the creator of LearnixOS, although it's kinda in a perpetual shadow prison because I haven't really gotten anytime because of work and among other things, pms was originally made as an idea for LearnixOS, in which was supposed to be LFS based. Of course, seeing how pms is now in my repository, LearnixOS has moved from being LFS based, to Gentoo based, to finally being decided as being Void based.
+As also the creator of LearnixOS, although it's kinda in a perpetual shadow prison because I haven't really gotten any time because of work and among other things, pms was originally made as an idea for LearnixOS, in which was supposed to be LFS based. Of course, seeing how pms is now in my repository, LearnixOS has moved from being LFS based, to Gentoo based, to finally being decided as being Void based.
 ### What will happen to pms?
-I hear you wonder. Well, after realizing that creating a distribution from scratch (and making it accessible and easy to use) was absolutely mind boggling, pms naturally fell into obscurity...
+I hear you wonder. Well, after realizing that creating a distribution from scratch (and making it accessible and easy to use for the normal user) was absolutely mind boggling, pms naturally fell into obscurity...
 UNTIL TODAY! After the first mention of pms, it naturally stayed as a little rat worm that couldn't get out of my head. After my switch to LFS full time as my daily driver, I realized that I could make an excuse of turning pms into a real thing. This will be much more actively developed than LearnixOS (hopefully), and help me increase my knowledge and understanding of C and the Linux system.
 ## Planned features
 - Json package builds
