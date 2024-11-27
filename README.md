@@ -67,5 +67,6 @@ Options:
 Report any bugs and help make this project become an actual usable source based package manager!
 # Credits
 Thanks to these projects that pms can come to reality!
-- [^1]: [CJSON](https://github.com/DaveGamble/cJSON)
+- [CJSON](https://github.com/DaveGamble/cJSON)
   - "Ultralightweight JSON parser in ANSI C" 
+[^1]: https://github.com/DaveGamble/cJSON
