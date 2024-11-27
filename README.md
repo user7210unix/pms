@@ -33,6 +33,38 @@ cd pms
 make
 ```
 For the beta version, there is no installing it yet, however you can move the created binary to /usr/bin and run pms normally. There will be a config.mk and you can edit it to your desires, there is currently a plan to set prefixes and other stuff.
+# Usage
+### The pkg.json file
+The naming scheme can be anything you desire, but to be frank, the hope is that the naming will be like this in pratice: {package_name}-{ver}.json
+Here is an example json package file for your viewing desires
+###### mypackage-1.0.0.json
+```
+{
+  "pkgname": "mypackage",
+  "version": "1.0.0",
+  "source": ["http://example.com/mypackage-1.0.0.tar.gz"],
+  "build": [
+    "tar -xzf mypackage-1.0.0.tar.gz",
+    "cd mypackage-1.0.0",
+    "./configure",
+    "make",
+    "make install"  // Placeholder - actual installation would need to be defined.
+  ],
+   "depends": ["libxyz", "libpng", "libass"]
+}
+```
+### Running pms
+For now, pms is very bare, with only 2 arguments you can parse to it: --help and --version. There are plans for other arguments you can parse, however these are for the future.
+```
+$ pms --version
+pms - Pack My Sh*t version: 0.0.1-beta
+$ pms --help
+Usage: pms [options] <pkgbuild.json>
+Options:
+    -h, --help      Display this help message
+    -v, --version   Display version information
+```
+Report any bugs and help make this project become an actual usable source based package manager!
 # Credits
 Thanks to these projects that pms can come to reality!
 - [1] CJSON - https://github.com/DaveGamble/cJSON
