@@ -22,7 +22,7 @@ UNTIL TODAY! After the first mention of pms, it naturally stayed as a little rat
 - C compiler (such as clang, gcc, or tcc)
 - C libraries
 - make
-- cjson^[1]
+- [cjson][1]
 
 ### Actually building it
 You will either download the tar from the releases, or get the development pms through git.
