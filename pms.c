@@ -1,4 +1,5 @@
 #define VERSION "0.0.1-beta"
+#define BOX " _____\n|     |\n|     |\n|     | <== GO INSIDE\n\\-----/\n"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,7 @@
 static const struct option long_options[] = {
     {"help", no_argument, 0, 'h'},
     {"version", no_argument, 0, 'V'},
+    {"box", no_argument, 0, 'B'},
     {0, 0, 0, 0} // Null terminator for the long_options array
 };
 
@@ -116,6 +118,9 @@ int main(int argc, char *argv[]) {
             return 0;  
         case 'V': // Version option
             printf("pms - Pack My Sh*t version: %s\n", VERSION);
+            return 0;
+        case 'B':
+            printf(BOX);
             return 0;
         case '?': // Invalid option
             fprintf(stderr, "Unknown option: %s\n", argv[optind-1]);
