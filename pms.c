@@ -109,12 +109,14 @@ int execute_build(const Package *pkg) {
 }
 
 int fetch_tarball(const char *url, const char *filename, int quiet){
-    if(quiet == 0){printf("fetching source...\n");};
+    if(quiet == 0){printf("Fetching Sources...\n");};
     CURL *curl = curl_easy_init();
-    CURLcode res;
+    CURLcode res = CURLE_FAILED_INIT; // Initialize to an error value
+
     if(!curl){
-        return 1;
+        return 1; // Or return res directly since it's already an error
     }
+
     if(curl) {
         FILE *source = fopen(filename, "w");
         curl_easy_setopt(curl, CURLOPT_URL, url);
