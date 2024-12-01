@@ -5,6 +5,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <cjson/cJSON.h>
+#include <sys/stat.h>
 #include <curl/curl.h>
 
 // Structure to hold package information
@@ -108,11 +109,16 @@ int execute_build(const Package *pkg) {
 int fetch_tarball(const char *url, const char *filename){
     printf("fetching source...");
     CURL *curl = curl_easy_init();
+    if(!curl){
+        return 1;
+    }
     if(curl) {
         CURLcode res;
         FILE *source = fopen(filename, "w");
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, source);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
         res = curl_easy_perform(curl);
         if(res){
@@ -124,7 +130,17 @@ int fetch_tarball(const char *url, const char *filename){
     }
     printf(" Done!\n");
     return 0;
+}
 
+int fetch_sources(const Package *pkg){
+    const char* filename;
+  for(int i = 0; i < sizeof(pkg->source)/sizeof(pkg->source[0]); i++){
+      filename =
+    if(!file_exists(filename)){
+        printf("package already downloaded!\n");
+       return 1;
+     }
+  }
 }
 
 int main(int argc, char *argv[]) {
