@@ -1,6 +1,7 @@
 # PMS - Pack My Sh*t
 # 
 # Developer: cowmonk
+# Contributor: kirwano
 #
 VERSION = 0.0.1-beta
 
