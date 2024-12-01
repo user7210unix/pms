@@ -115,7 +115,7 @@ int fetch_tarball(const char *url, const char *filename){
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, source);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
         res = curl_easy_perform(curl);
-        if(!res){
+        if(res){
             printf(" FETCH FAILED\n");
             return 1;
         }
