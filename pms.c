@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <unistd.h>
 #include <cjson/cJSON.h>
-#include <sys/stat.h>
 #include <curl/curl.h>
 
 // Structure to hold package information
@@ -106,14 +106,14 @@ int execute_build(const Package *pkg) {
     return 0;
 }
 
-int fetch_tarball(const char *url, const char *filename){
-    printf("fetching source...");
+int fetch_tarball(const char *url, const char *filename, int quiet){
+    if(quiet == 0){printf("fetching source...\n");};
     CURL *curl = curl_easy_init();
+    CURLcode res;
     if(!curl){
         return 1;
     }
     if(curl) {
-        CURLcode res;
         FILE *source = fopen(filename, "w");
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, source);
@@ -121,26 +121,36 @@ int fetch_tarball(const char *url, const char *filename){
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
         res = curl_easy_perform(curl);
-        if(res){
-            printf(" FETCH FAILED\n");
-            return 1;
-        }
         curl_easy_cleanup(curl);
         fclose(source);
     }
-    printf(" Done!\n");
-    return 0;
+    if(quiet==0){printf(" Done!\n");}
+    return res != CURLE_OK;
 }
 
-int fetch_sources(const Package *pkg){
+int fetch_sources(const Package *pkg, int quiet){
+    if(quiet == 1){printf("Fetching sources... ");}
     const char* filename;
-  for(int i = 0; i < sizeof(pkg->source)/sizeof(pkg->source[0]); i++){
-      filename =
-    if(!file_exists(filename)){
-        printf("package already downloaded!\n");
-       return 1;
+  for(size_t i = 0; i < pkg->source_count; i++){
+      filename = strrchr(pkg->source[i], '/');
+      filename = filename ? filename + 1 : pkg->source[i];
+    if(access(filename, F_OK) == 0){
+        printf("Skipping download: %s already downloaded!\n", filename);
+        continue;
      }
+
+    if(quiet==0){printf("Download %s to %s\n", pkg->source[i], filename);}
+    if (fetch_tarball(pkg->source[i], filename, quiet)) {
+            fprintf(stderr, "Error downloading %s\n", pkg->source[i]);
+            return 1;
+    }
+
+    fetch_tarball(pkg->source[i], filename, quiet);
+
+    if(quiet==0){printf("%s Completed!", filename);}
   }
+  if(quiet == 1){printf(" Done!\n");}
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -149,9 +159,12 @@ int main(int argc, char *argv[]) {
         {"help",    no_argument, 0, 'h'},
         {"version", no_argument, 0, 'V'},
         {"box",     no_argument, 0, 'B'},
+        {"quiet",   no_argument, 0, 'q'},
         {0, 0, 0, 0} // Null terminator for the long_options array
     };
     int option_index = 0;
+
+    int quiet = 0;
 
     for (int opt; (opt = getopt_long(argc, argv, "h::", long_options, &option_index)) != -1;) {
 
@@ -161,6 +174,7 @@ int main(int argc, char *argv[]) {
             printf("Options:\n");
             printf("    -h, --help      Display this help message\n");
             printf("    -v, --version   Display version information\n");
+            printf("    -q, --quiet,    Display less information about package downloading");
             return 0;  
         case 'V': // Version option
             printf("pms - Pack My Sh*t version: %s\n", VERSION);
@@ -168,6 +182,9 @@ int main(int argc, char *argv[]) {
         case 'B':
             printf(" _____\n|     |\n|     |\n|     | <== GO INSIDE\n\\-----/\n");
             return 0;
+        case 'q':
+            quiet = 1;
+            continue;
         case '?': // Invalid option
             fprintf(stderr, "Unknown option: %s\n", argv[optind-1]);
             return 1;
@@ -183,19 +200,14 @@ int main(int argc, char *argv[]) {
 
     Package pkg = {0};
     parse_pkgbuild(argv[optind], &pkg);
-    if (parse_pkgbuild(argv[optind], &pkg) == 0) {
+    if (parse_pkgbuild(argv[optind], &pkg) != 0) {
         fprintf(stderr, "Error parsing pkgbuild.json\n");
         return 1;
     }
-    int r = fetch_tarball(pkg.source[0], pkg.pkgname);
-    if(r == 1){
-        return r;
-    }
+    fetch_sources(&pkg, quiet);
 
     // Implement dependency resolution here later, way too lazy for that for now
 
-
-    // NO way CHAT WE ARE RUNNING BUILD SCRIPTS NOW!!!! (still need to pull the sources)
     int ret = execute_build(&pkg);
     free_package(&pkg);
     return ret;
