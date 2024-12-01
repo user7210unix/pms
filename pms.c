@@ -1,5 +1,4 @@
 #define VERSION "0.0.1-beta"
-#define BOX " _____\n|     |\n|     |\n|     | <== GO INSIDE\n\\-----/\n"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +6,8 @@
 #include <cjson/cJSON.h>
 #include <unistd.h>
 #include <getopt.h>
+
+#include <curl/curl.h>
 
 // Long name variants of commands
 static const struct option long_options[] = {
@@ -104,8 +105,30 @@ int execute_build(const Package *pkg) {
     return 0;
 }
 
+void fetch_tarball(const char *url, const char *filename){
+    printf("fetching source...");
+    CURL *curl = curl_easy_init();
+    if(curl) {
+        CURLcode res;
+        FILE *source = fopen(filename, "w");
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, source);
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+        res = curl_easy_perform(curl);
+        if(!res){
+            printf(" FETCH FAILED\n");
+        }
+        else{
+            printf(" Done!\n");
+        }
+        curl_easy_cleanup(curl);
+        fclose(source);
+    }
+
+}
+
 int main(int argc, char *argv[]) {
-    int option_index = 0;    
+    int option_index = 0;
 
     for (int opt; (opt = getopt_long(argc, argv, "h::", long_options, &option_index)) != -1;) {
 
@@ -120,7 +143,7 @@ int main(int argc, char *argv[]) {
             printf("pms - Pack My Sh*t version: %s\n", VERSION);
             return 0;
         case 'B':
-            printf(BOX);
+            printf(" _____\n|     |\n|     |\n|     | <== GO INSIDE\n\\-----/\n");
             return 0;
         case '?': // Invalid option
             fprintf(stderr, "Unknown option: %s\n", argv[optind-1]);
@@ -144,15 +167,15 @@ int main(int argc, char *argv[]) {
     }*/
 
     if (optind < argc) { // Check if a pkgbuild.json file was provided
-        char *filename = argv[optind];
-
         Package pkg = {0};
+        char* filename = argv[optind];
         if (parse_pkgbuild(filename, &pkg) != 0) {
             fprintf(stderr, "Error parsing PKG file.\n");
             return 1;
         }
-        // ... (rest of the processing using the filename)
 
+        parse_pkgbuild(filename, &pkg);
+        fetch_tarball(pkg.source[0], pkg.pkgname);
 
     } else{
         printf("Usage: %s [options] <pkgbuild.json>\n\n", argv[0]);
