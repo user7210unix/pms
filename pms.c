@@ -1,5 +1,7 @@
 #define VERSION "0.0.1-beta"
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
