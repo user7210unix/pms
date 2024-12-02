@@ -108,7 +108,7 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
 // Function to execute build commands : UPDATE - it now changes directory to the download directory
 // extra note: It can also now finally change directories to the extracted tarball if you specify a cd
 //             However I recommend from this really dumb way of doing it, you better use .. and . a lot... :(
-int execute_build(const Package *pkg) {
+int execute_build(const Package *pkg, int quiet) {
     char cwd[PATH_MAX];
     if (!getcwd(cwd, sizeof(cwd)))
         return (perror("getcwd"), 1);
@@ -119,7 +119,9 @@ int execute_build(const Package *pkg) {
     size_t i;
     int ret = 0;
     for (i = 0; i < pkg->build_count && !ret; i++) {
-        printf("Executing: %s\n", pkg->build[i]);
+        if (!quiet) {
+            printf("Executing: %s\n", pkg->build[i]);
+        }
 
         if (!strncmp(pkg->build[i], "cd ", 3)) {
             ret = chdir(pkg->build[i] + 3) ? (perror("chdir"), 1) : 0;
@@ -274,7 +276,7 @@ int main(int argc, char *argv[]) {
 
     // Implement dependency resolution here later, way too lazy for that for now
 
-    int ret = execute_build(&pkg);
+    int ret = execute_build(&pkg, quiet);
     free_package(&pkg);
     return ret;
 }
