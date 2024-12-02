@@ -144,7 +144,7 @@ int fetch_sources(const Package *pkg, int quiet){
      }
 
     if(quiet==0){printf("Download %s to %s\n", pkg->source[i], filename);}
-    if (fetch_tarball(pkg->source[i], filename, quiet)) {
+    if (fetch_tarball(pkg->source[i], filename, quiet) && force_download == 0) {
             fprintf(stderr, "Error downloading %s\n", pkg->source[i]);
             return 1;
     }
