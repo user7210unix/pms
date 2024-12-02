@@ -42,6 +42,31 @@ void free_package(Package *pkg) {
   free(pkg->depends);
 }
 
+// Extract build scripts, array handling
+int parse_json_array(cJSON *root, Package *pkg, const char *field_name,
+                     char ***field_ptr, size_t *count_ptr) {
+  cJSON *item = cJSON_GetObjectItemCaseSensitive(root, field_name);
+  if (item && cJSON_IsArray(item)) {
+    *count_ptr = cJSON_GetArraySize(item);
+    *field_ptr = calloc(*count_ptr, sizeof(char *));
+    if (*field_ptr) {
+      for (size_t i = 0; i < *count_ptr; i++) {
+        cJSON *array_item = cJSON_GetArrayItem(item, i);
+        if (cJSON_IsString(array_item)) {
+          (*field_ptr)[i] = strdup(array_item->valuestring);
+        } else {
+          fprintf(stderr, "Error: Non-string value found in array\n");
+          return 1;
+        }
+      }
+    }
+  } else {
+    *count_ptr = 0;
+    *field_ptr = NULL;
+  }
+  return 0;
+}
+
 // Function to parse the JSON PKGBUILD
 int parse_pkgbuild(const char *filename, Package *pkg) {
   FILE *fp = fopen(filename, "rb"); // Read in binary mode for portability
@@ -82,34 +107,10 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
   pkg->pkgname =
       item && cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
 
-// Extract build scripts, array handling - Rewrite, trying something new and
-// seeing if it works
-#define PARSE_ARRAY(field, count)                                              \
-  item = cJSON_GetObjectItemCaseSensitive(root, #field);                       \
-  if (item && cJSON_IsArray(item)) {                                           \
-    pkg->count = cJSON_GetArraySize(item);                                     \
-    pkg->field = calloc(pkg->count, sizeof(char *));                           \
-    if (pkg->field) {                                                          \
-      for (size_t i = 0; i < pkg->count; i++) {                                \
-        cJSON *array_item = cJSON_GetArrayItem(item, i);                       \
-        if (cJSON_IsString(array_item)) {                                      \
-          pkg->field[i] = strdup(array_item->valuestring);                     \
-        } else {                                                               \
-          fprintf(stderr, "Error: Non-string value found in array\n");         \
-          return 1;                                                            \
-        }                                                                      \
-      }                                                                        \
-    }                                                                          \
-  } else {                                                                     \
-    pkg->count = 0;                                                            \
-    pkg->field = NULL;                                                         \
-  } // I basically added it so that if the field is empty, it doesn't throw a
-    // tantrum
-
-  PARSE_ARRAY(source, source_count);
-  PARSE_ARRAY(patches, patch_count);
-  PARSE_ARRAY(build, build_count);
-  PARSE_ARRAY(depends, depends_count);
+  parse_json_array(root, pkg, "source", &pkg->source, &pkg->source_count);
+  parse_json_array(root, pkg, "patches", &pkg->patches, &pkg->patch_count);
+  parse_json_array(root, pkg, "build", &pkg->build, &pkg->build_count);
+  parse_json_array(root, pkg, "depends", &pkg->depends, &pkg->depends_count);
 
   cJSON_Delete(root); // Free cJSON data structure
   return 0;
@@ -296,7 +297,7 @@ int main(int argc, char *argv[]) {
       printf("    -h, --help      Display this help message\n");
       printf("    -v, --version   Display version information\n");
       printf("    -q, --quiet,    Display less information about package "
-          "downloading\n");
+             "downloading\n");
       return 0;
     case 'V': // Version option
       printf("pms - Pack My Sh*t version: %s\n", VERSION);
