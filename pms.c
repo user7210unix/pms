@@ -174,32 +174,36 @@ int pull_files(const char *url, const char *filename, int quiet) {
 }
 
 int fetch_sources(const Package *pkg, int quiet) {
-    if(quiet == 1){printf("Fetching sources... ");}
-    const char* filename;
-    char full_path[PATH_MAX];
-  for(size_t i = 0; i < pkg->source_count; i++) {
-      filename = strrchr(pkg->source[i], '/');
-      filename = filename ? filename + 1 : pkg->source[i];
-
-      snprintf(full_path, sizeof(full_path), "%s/%s", download_dir, filename);
-
-    if(access(full_path, F_OK) == 0) {
-        printf("Skipping download: %s already downloaded!\n", filename);
-        continue;
-     }
-
-    if(quiet==0){printf("Download %s to %s\n", pkg->source[i], full_path);}
-    if (pull_files(pkg->source[i], full_path, quiet)) {
-            fprintf(stderr, "Error downloading %s\n", pkg->source[i]);
-            return 1;
+    if (quiet == 1) {printf("Fetching sources... ");}
+    if (!pkg || !pkg->source || pkg->source_count == 0) {
+        return 0; // Return early if no sources
     }
 
-    pull_files(pkg->source[i], full_path, quiet);
+    const char* filename;
+    char full_path[PATH_MAX];
+    for(size_t i = 0; i < pkg->source_count; i++) {
+        if (!pkg->source[i]) continue; // Skip if null entry
 
-    if(quiet==0){printf("%s Completed!", filename);}
-  }
-  if(quiet == 1){printf(" Done!\n");}
-  return 0;
+        filename = strrchr(pkg->source[i], '/');
+        filename = filename ? filename + 1 : pkg->source[i];
+
+        snprintf(full_path, sizeof(full_path), "%s/%s", download_dir, filename);
+
+        if(access(full_path, F_OK) == 0) {
+            printf("Skipping download: %s already downloaded!\n", filename);
+            continue;
+        }
+
+        if(quiet==0){printf("Download %s to %s\n", pkg->source[i], full_path);}
+        if (pull_files(pkg->source[i], full_path, quiet)) {
+            fprintf(stderr, "Error downloading %s\n", pkg->source[i]);
+            return 1;
+        }
+
+        if(quiet==0){printf("%s Completed!", filename);}
+    }
+    if(quiet == 1){printf(" Done!\n");}
+    return 0;
 }
 
 int fetch_patches(const Package *pkg, int quiet){
