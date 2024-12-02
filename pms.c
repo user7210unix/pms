@@ -110,42 +110,25 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
 //             However I recommend from this really dumb way of doing it, you better use .. and . a lot... :(
 int execute_build(const Package *pkg) {
     char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) == NULL) {
-        perror("getcwd");
-        return 1;
-    }
+    if (!getcwd(cwd, sizeof(cwd)))
+        return (perror("getcwd"), 1);
 
-    if (chdir(download_dir) != 0) {
-        perror("chdir");
-        return 1;
-    }
+    if (chdir(download_dir))
+        return (perror("chdir"), 1);
 
+    size_t i;
     int ret = 0;
-    for (size_t i = 0; i < pkg->build_count; i++) {
+    for (i = 0; i < pkg->build_count && !ret; i++) {
         printf("Executing: %s\n", pkg->build[i]);
 
-        // Check if command starts with cd
-        if (strncmp(pkg->build[i], "cd ", 3) == 0) {
-            if (chdir(pkg->build[i] + 3) != 0) {
-                perror("chdir");
-                ret = 1;
-                break;
-            }
+        if (!strncmp(pkg->build[i], "cd ", 3)) {
+            ret = chdir(pkg->build[i] + 3) ? (perror("chdir"), 1) : 0;
             continue;
         }
-
-        if (system(pkg->build[i]) != 0) {
-            ret = 1;
-            break;
-        }
+        ret = system(pkg->build[i]) ? 1 : 0;
     }
 
-    if (chdir(cwd) != 0) {
-        perror("chdir");
-        return 1;
-    }
-
-    return ret;
+    return chdir(cwd) ? (perror("chdir"), 1) : ret;
 }
 
 // Renamed fetch_tarball to pull_files, mostly because we are using this for the patches too
