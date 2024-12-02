@@ -88,6 +88,9 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
                     cJSON *array_item = cJSON_GetArrayItem(item, i); \
                     if (cJSON_IsString(array_item)) { \
                         pkg->field[i] = strdup(array_item->valuestring); \
+                    } else { \
+                        fprintf(stderr, "Error: Non-string value found in array\n"); \
+                        return 1; \
                     } \
                 } \
             } \
@@ -117,9 +120,8 @@ int execute_build(const Package *pkg, int quiet) {
     if (chdir(download_dir))
         return (perror("chdir"), 1);
 
-    size_t i;
     int ret = 0;
-    for (i = 0; i < pkg->build_count && !ret; i++) {
+    for (size_t i = 0; i < pkg->build_count && !ret; i++) {
         if (quiet == 0) {
             printf("Executing: %s\n", pkg->build[i]);
         }
@@ -138,23 +140,21 @@ int execute_build(const Package *pkg, int quiet) {
 int pull_files(const char *url, const char *filename, int quiet) {
     if(quiet == 0){printf("Fetching Sources...\n");};
     CURL *curl = curl_easy_init();
-    CURLcode res = CURLE_FAILED_INIT; // Initialize to an error value
+    CURLcode res = CURLE_FAILED_INIT;
 
     if(!curl){
-        return 1; // Or return res directly since it's already an error
+        return 1;
     }
 
-    if(curl) {
-        FILE *source = fopen(filename, "w");
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, source);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-        res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-        fclose(source);
-    }
+   FILE *source = fopen(filename, "w");
+   curl_easy_setopt(curl, CURLOPT_URL, url);
+   curl_easy_setopt(curl, CURLOPT_WRITEDATA, source);
+   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+   curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+   curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+   res = curl_easy_perform(curl);
+   curl_easy_cleanup(curl);
+   fclose(source);
     if(quiet==0){printf(" Done!\n");}
     return res != CURLE_OK;
 }
@@ -162,13 +162,13 @@ int pull_files(const char *url, const char *filename, int quiet) {
 int fetch_sources(const Package *pkg, int quiet) {
     if (quiet == 1) {printf("Fetching sources... ");}
     if (!pkg || !pkg->source || pkg->source_count == 0) {
-        return 0; // Return early if no sources
+        return 0;
     }
 
     // Check if download_dir exists and create if needed | Segment fault if it doesn't exist :sob:
     struct stat st = {0};
     if (stat(download_dir, &st) == -1) {
-        if (mkdir(download_dir, 0744) == -1) { // Read-only access for normal users
+        if (mkdir(download_dir, 0755) == -1) { // Read+execute access for normal users
             fprintf(stderr, "Error creating download directory %s\n", download_dir);
             return 1;
         }
@@ -177,7 +177,7 @@ int fetch_sources(const Package *pkg, int quiet) {
     const char* filename;
     char full_path[PATH_MAX];
     for(size_t i = 0; i < pkg->source_count; i++) {
-        if (!pkg->source[i]) continue; // Skip if null entry
+        if (!pkg->source[i]) continue;
 
         filename = strrchr(pkg->source[i], '/');
         filename = filename ? filename + 1 : pkg->source[i];
