@@ -4,10 +4,10 @@
 # Contributor: kirwano
 #
 
-VERSION = 0.0.1-beta
+VERSION = 0.9.9-PREVIEW
 
 # Compiler Flags & default C compiler
-CFLAGS = -g -pedantic -Wall -Os -lcurl
+CFLAGS = -g -pedantic -Wall -Os
 # INCLUDES =
 # LDFLAGS =
 CC=cc
