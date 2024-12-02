@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <cjson/cJSON.h>
 #include <curl/curl.h>
+#include <sys/stat.h>
 
 // Structure to hold package information
 typedef struct {
@@ -164,6 +165,15 @@ int fetch_sources(const Package *pkg, int quiet) {
         return 0; // Return early if no sources
     }
 
+    // Check if download_dir exists and create if needed | Segment fault if it doesn't exist :sob:
+    struct stat st = {0};
+    if (stat(download_dir, &st) == -1) {
+        if (mkdir(download_dir, 0744) == -1) { // Read-only access for normal users
+            fprintf(stderr, "Error creating download directory %s\n", download_dir);
+            return 1;
+        }
+    }
+
     const char* filename;
     char full_path[PATH_MAX];
     for(size_t i = 0; i < pkg->source_count; i++) {
@@ -220,6 +230,17 @@ int fetch_patches(const Package *pkg, int quiet){
     return 0;
 }
 
+// Check for root privileges
+int check_root() {
+    uid_t uid = getuid();
+    if (uid != 0) {
+        fprintf(stderr, "PMS requires root privileges to install packages.\n");
+        fprintf(stderr, "Please run with sudo/doas.\n");
+        return 1;
+    }
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     // Long name variants of commands | Moving it down here for ez of access
     static const struct option long_options[] = {
@@ -271,6 +292,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Error parsing pkgbuild.json\n");
         return 1;
     }
+
+    check_root();
     fetch_sources(&pkg, quiet);
     fetch_patches(&pkg, quiet);
 
