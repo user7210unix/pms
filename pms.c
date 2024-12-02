@@ -14,10 +14,12 @@
 typedef struct {
     char *pkgname;
     char **source;
+    char **patches;
     char **build;
     char **depends;
 
     size_t source_count;
+    size_t patch_count;
     size_t build_count;
     size_t depends_count;
 } Package;
@@ -26,9 +28,11 @@ typedef struct {
 void free_package(Package *pkg) {
     free(pkg->pkgname);
     for (size_t i = 0; i < pkg->source_count; i++) free(pkg->source[i]);
+    for (size_t i = 0; i < pkg->patch_count; i++) free(pkg->source[i]);
     for (size_t i = 0; i < pkg->build_count; i++) free(pkg->build[i]);
     for (size_t i = 0; i < pkg->depends_count; i++) free(pkg->depends[i]);
     free(pkg->source);
+    free(pkg->patches);
     free(pkg->build);
     free(pkg->depends);
 }
@@ -51,7 +55,7 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
         fclose(fp);
         return 1;
     }
-    
+
     if (fread(buffer, 1, file_size, fp) != file_size) {
         perror("fread");
         fclose(fp);
@@ -75,7 +79,7 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
     // Extract build scripts, array handling - Rewrite, trying something new and seeing if it works
     #define PARSE_ARRAY(field, count) \
         item = cJSON_GetObjectItemCaseSensitive(root, #field); \
-        if (cJSON_IsArray(item)) { \
+        if (item && cJSON_IsArray(item)) { \
             pkg->count = cJSON_GetArraySize(item); \
             pkg->field = calloc(pkg->count, sizeof(char *)); \
             if (pkg->field) { \
@@ -86,29 +90,66 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
                     } \
                 } \
             } \
-        }
+        } else { \
+            pkg->count = 0; \
+            pkg->field = NULL; \
+        } // I basically added it so that if the field is empty, it doesn't throw a tantrum
 
     PARSE_ARRAY(source, source_count);
+    PARSE_ARRAY(patches, patch_count);
     PARSE_ARRAY(build, build_count);
     PARSE_ARRAY(depends, depends_count);
-    
+
     cJSON_Delete(root); // Free cJSON data structure
     return 0;
 }
 
 
-// Function to execute build commands
+// Function to execute build commands : UPDATE - it now changes directory to the download directory
+// extra note: It can also now finally change directories to the extracted tarball if you specify a cd
+//             However I recommend from this really dumb way of doing it, you better use .. and . a lot... :(
 int execute_build(const Package *pkg) {
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        perror("getcwd");
+        return 1;
+    }
+
+    if (chdir(download_dir) != 0) {
+        perror("chdir");
+        return 1;
+    }
+
+    int ret = 0;
     for (size_t i = 0; i < pkg->build_count; i++) {
         printf("Executing: %s\n", pkg->build[i]);
+
+        // Check if command starts with cd
+        if (strncmp(pkg->build[i], "cd ", 3) == 0) {
+            if (chdir(pkg->build[i] + 3) != 0) {
+                perror("chdir");
+                ret = 1;
+                break;
+            }
+            continue;
+        }
+
         if (system(pkg->build[i]) != 0) {
-            return 1;
+            ret = 1;
+            break;
         }
     }
-    return 0;
+
+    if (chdir(cwd) != 0) {
+        perror("chdir");
+        return 1;
+    }
+
+    return ret;
 }
 
-int fetch_tarball(const char *url, const char *filename, int quiet){
+// Renamed fetch_tarball to pull_files, mostly because we are using this for the patches too
+int pull_files(const char *url, const char *filename, int quiet) {
     if(quiet == 0){printf("Fetching Sources...\n");};
     CURL *curl = curl_easy_init();
     CURLcode res = CURLE_FAILED_INIT; // Initialize to an error value
@@ -132,29 +173,62 @@ int fetch_tarball(const char *url, const char *filename, int quiet){
     return res != CURLE_OK;
 }
 
-int fetch_sources(const Package *pkg, int quiet){
+int fetch_sources(const Package *pkg, int quiet) {
     if(quiet == 1){printf("Fetching sources... ");}
     const char* filename;
-  for(size_t i = 0; i < pkg->source_count; i++){
+    char full_path[PATH_MAX];
+  for(size_t i = 0; i < pkg->source_count; i++) {
       filename = strrchr(pkg->source[i], '/');
       filename = filename ? filename + 1 : pkg->source[i];
-    if(access(filename, F_OK) == 0){
+
+      snprintf(full_path, sizeof(full_path), "%s/%s", download_dir, filename);
+
+    if(access(full_path, F_OK) == 0) {
         printf("Skipping download: %s already downloaded!\n", filename);
         continue;
      }
 
-    if(quiet==0){printf("Download %s to %s\n", pkg->source[i], filename);}
-    if (fetch_tarball(pkg->source[i], filename, quiet)) {
+    if(quiet==0){printf("Download %s to %s\n", pkg->source[i], full_path);}
+    if (pull_files(pkg->source[i], full_path, quiet)) {
             fprintf(stderr, "Error downloading %s\n", pkg->source[i]);
             return 1;
     }
 
-    fetch_tarball(pkg->source[i], filename, quiet);
+    pull_files(pkg->source[i], full_path, quiet);
 
     if(quiet==0){printf("%s Completed!", filename);}
   }
   if(quiet == 1){printf(" Done!\n");}
   return 0;
+}
+
+int fetch_patches(const Package *pkg, int quiet){
+    if(quiet == 1){printf("Fetching patches... ");}
+    const char* filename;
+    char full_path[PATH_MAX];
+    for(size_t i = 0; i < pkg->patch_count; i++) {
+        filename = strrchr(pkg->patches[i], '/');
+        filename = filename ? filename + 1 : pkg->patches[i];
+
+        snprintf(full_path, sizeof(full_path), "%s/%s", download_dir, filename);
+
+        if(access(full_path, F_OK) == 0) {
+            printf("Skipping download: %s already downloaded!\n", filename);
+            continue;
+        }
+
+        if(quiet==0){printf("Download %s to %s\n", pkg->patches[i], full_path);}
+        if (pull_files(pkg->patches[i], full_path, quiet)) {
+            fprintf(stderr, "Error downloading %s\n", pkg->patches[i]);
+            return 1;
+        }
+
+        pull_files(pkg->patches[i], full_path, quiet);
+
+        if(quiet==0){printf("%s Completed!", filename);}
+    }
+    if(quiet == 1){printf(" Done!\n");}
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -179,7 +253,7 @@ int main(int argc, char *argv[]) {
             printf("    -h, --help      Display this help message\n");
             printf("    -v, --version   Display version information\n");
             printf("    -q, --quiet,    Display less information about package downloading");
-            return 0;  
+            return 0;
         case 'V': // Version option
             printf("pms - Pack My Sh*t version: %s\n", VERSION);
             return 0;
@@ -193,7 +267,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Unknown option: %s\n", argv[optind-1]);
             return 1;
         default: // Unexpected cases
-            abort();  
+            abort();
         }
     }
 
@@ -209,6 +283,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     fetch_sources(&pkg, quiet);
+    fetch_patches(&pkg, quiet);
 
     // Implement dependency resolution here later, way too lazy for that for now
 
