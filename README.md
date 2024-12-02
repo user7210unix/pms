@@ -13,7 +13,7 @@ UNTIL TODAY! After the first mention of pms, it naturally stayed as a little rat
 LearnixOS is moving to LFS based again! PMS is now the official package manager for LearnixOS. We as the LearnixOS dev team will be maintaining and creating awesome utilities that are around that Learnix ecosystem!
 ## Planned features
 - Json package builds
-  - No longer that we must SUFFER with the terrible looks and garbage looking ebuilds and PKGBUILDS from arch, and the difficulty of understanding what it really does (I'm looking at you gentoo, it's okay but I really don't like the fact you can't see what enabling USE flags will do in ebuilds). I am also hopping it makes the barrier to entry a lot easier, creating an "AUR" or "Gentoo Overlays" of some sort. Of course, for now, creating these json pkg build files are all manual, which can get annoying, which a automation of creating pkg build files will be created one day. 
+  - No longer that we must SUFFER with the terrible looks and garbage looking ebuilds and PKGBUILDS from arch, and the difficulty of understanding what it really does (I'm looking at you gentoo, it's okay but I really don't like the fact you can't see what enabling USE flags will do in ebuilds). I am also hopping it makes the barrier to entry a lot easier, creating an "AUR" or "Gentoo Overlays" of some sort. Of course, for now, creating these json pkg build files are all manual, which can get annoying, which a automation of creating pkg build files will be created one day.
 - Minimal to the bone!
   - For now, I am trying to get the base stuff down, creating a package manager is not easy but I will try my best to follow suckless philosophy and make it easy to hack. Additionally I do want to minimize the dependencies and make sure it's as lightweight as I can, obviously, my choice in using json as the pkg build was obviously a cosmetic choice. Comments are seen throughout the project and they can help some people understand the mess of a job I am doing.
 - So easy to use, even a baby can use it!
@@ -24,7 +24,11 @@ LearnixOS is moving to LFS based again! PMS is now the official package manager 
 - C compiler (such as clang, gcc, or tcc)
 - C libraries
 - make
+- curl
 - cjson[^1]
+
+#### Optional dependencies
+- git (repo support and development versions of packages, which is coming soon)
 
 ### Actually building it
 You will either download the tar from the releases, or get the development pms through git.
@@ -45,9 +49,10 @@ Here is an example json package file for your viewing desires
   "pkgname": "mypackage",
   "version": "1.0.0",
   "source": ["http://example.com/mypackage-1.0.0.tar.gz"],
+  "patches": ["http://example.com/nofstack.patch"], // This can be omitted from the file no problem, this is just optional stuff
   "build": [
-    "tar -xzf mypackage-1.0.0.tar.gz",
-    "cd mypackage-1.0.0",
+    "tar -xzf mypackage-1.0.0.tar.gz", // This is planned to be not needed, we will automatically unzip/untar the package for you
+    "cd mypackage-1.0.0", // This is also planned to not be needed, so that we can automatically patch for you if there are patches available
     "./configure",
     "make",
     "make install"  // Placeholder - actual installation would need to be defined.
@@ -56,7 +61,7 @@ Here is an example json package file for your viewing desires
 }
 ```
 ### Running pms
-For now, pms is very bare, with only 2 arguments you can parse to it: --help and --version. There are plans for other arguments you can parse, however these are for the future.
+For now pms is very bare, with only four arguments that you can parse to it. You can only run build scripts for now following the mypackage.json example.
 ```
 $ pms --version
 pms - Pack My Sh*t version: 0.0.1-beta
@@ -65,10 +70,25 @@ Usage: pms [options] <pkgbuild.json>
 Options:
     -h, --help      Display this help message
     -v, --version   Display version information
+$ pms --quiet neofetch.json
+Fetching sources... Skipping download: 7.1.0.tar.gz already downloaded!
+ Done!
+Fetching patches...  Done!
+neofetch-7.1.0/
+neofetch-7.1.0/.github/
+neofetch-7.1.0/.github/ISSUE_TEMPLATE.md
+neofetch-7.1.0/.github/PULL_REQUEST_TEMPLATE.md
+neofetch-7.1.0/.travis.yml
+neofetch-7.1.0/CONTRIBUTING.md
+neofetch-7.1.0/LICENSE.md
+neofetch-7.1.0/Makefile
+neofetch-7.1.0/README.md
+neofetch-7.1.0/neofetch
+neofetch-7.1.0/neofetch.1
 ```
 Report any bugs and help make this project become an actual usable source based package manager!
 # Credits
 It's because of these projects that pms can actually function, so thanks :-)
 - [CJSON](https://github.com/DaveGamble/cJSON)
-  - "Ultralightweight JSON parser in ANSI C" 
+  - "Ultralightweight JSON parser in ANSI C"
 [^1]: https://github.com/DaveGamble/cJSON

@@ -119,7 +119,7 @@ int execute_build(const Package *pkg, int quiet) {
     size_t i;
     int ret = 0;
     for (i = 0; i < pkg->build_count && !ret; i++) {
-        if (!quiet) {
+        if (quiet == 0) {
             printf("Executing: %s\n", pkg->build[i]);
         }
 
