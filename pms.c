@@ -1,4 +1,4 @@
-#define VERSION "0.0.1-beta"
+#define VERSION "0.9.9-PREVIEW"
 
 #include "config.h"
 
