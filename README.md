@@ -1,16 +1,18 @@
 # Pack My Sh*t
 ## What is PMS?
 PMS is essentially a minimal package manager. Okay, not really, for now, it just runs basic build scripts in the form of a .json.
+It is also the official package manager of the famous LearnixOS, the greatest distro (in production) of all time.
 ## Why make this?
 Hi I'm cowmonk, the founder and maintainer of this beauty, being a gigachad LFS user, I felt it was time to start making my own package manager, and with the firey passion to do something in C, pms came into fruition.
+My idea was simple: What makes other package managers so bad? Well, here are some of the things I compiled:
+- It's slow as hell! (I'm looking at you apt)
+- It's not intuitive enough!
+- It's not SUCKLESS! (Over engineered!)
+- and much more! I wouldn't want to get into a long rant about it.
+The main reason was #3, there are rarely any "suckless"-like package managers, so I really wanted to make one. Since we already have suckless core (I use it on my LFS system), it's time to also expand that amazing ecosystem.
 ### Where the name originates
 I have to give credit because the name pms originally came from Learnix's discord server from a **very** active member of the community, if you want to know him, you will have to 👊 SMASH 👊 THAT SUBSCRIBE BUTTON and join LearnixTV's discord server 😜.
 As also the creator of LearnixOS, although it's kinda in a perpetual shadow prison because I haven't really gotten any time because of work and among other things, pms was originally made as an idea for LearnixOS, in which was supposed to be LFS based. Of course, seeing how pms is now in my repository, LearnixOS has moved from being LFS based, to Gentoo based, to finally being decided as being Void based.
-### What will happen to pms?
-I hear you wonder. Well, after realizing that creating a distribution from scratch (and making it accessible and easy to use for the normal user) was absolutely mind boggling, pms naturally fell into obscurity...
-UNTIL TODAY! After the first mention of pms, it naturally stayed as a little rat worm that couldn't get out of my head. After my switch to LFS full time as my daily driver, I realized that I could make an excuse of turning pms into a real thing. This will be much more actively developed than LearnixOS (hopefully), and help me increase my knowledge and understanding of C and the Linux system.
-### UPDATE
-LearnixOS is moving to LFS based again! PMS is now the official package manager for LearnixOS. We as the LearnixOS dev team will be maintaining and creating awesome utilities that are around that Learnix ecosystem!
 ## Planned features
 - Json package builds
   - No longer that we must SUFFER with the terrible looks and garbage looking ebuilds and PKGBUILDS from arch, and the difficulty of understanding what it really does (I'm looking at you gentoo, it's okay but I really don't like the fact you can't see what enabling USE flags will do in ebuilds). I am also hopping it makes the barrier to entry a lot easier, creating an "AUR" or "Gentoo Overlays" of some sort. Of course, for now, creating these json pkg build files are all manual, which can get annoying, which a automation of creating pkg build files will be created one day.
@@ -31,30 +33,32 @@ LearnixOS is moving to LFS based again! PMS is now the official package manager 
 - unzip
 #### Optional dependencies
 - git (repo support and development versions of packages, which is coming soon)
-
 ### Actually building it
 You will either download the tar from the releases, or get the development pms through git.
-Either way, the process will be basically the same. Here's the process (for the beta version):
-```
+Either way, the process will be basically the same. Here's the process (for the development version):
+```bash
 git clone https://github.com/Rekketstone/pms.git pms
 cd pms
 make
+sudo/doas make install
 ```
-For the beta version, there is no installing it yet, however you can move the created binary to /usr/bin and run pms normally. There will be a config.mk and you can edit it to your desires, there is currently a plan to set prefixes and other stuff.
+It is recommended to edit the config.h like how you do with dwm. Make changes as you wish.
 # Usage
 ### The pkg.json file
 The naming scheme can be anything you desire, but to be frank, the hope is that the naming will be like this in pratice: {package_name}-{ver}.json
 Here is an example json package file for your viewing desires
 ###### mypackage-1.0.0.json
-```
+```json
 {
   "pkgname": "mypackage",
   "version": "1.0.0",
   "source": ["http://example.com/mypackage-1.0.0.tar.gz"],
-  "patches": ["http://example.com/nofstack.patch"], // This can be omitted from the file no problem, this is just optional stuff
-  "build": [
-    "tar -xzf mypackage-1.0.0.tar.gz", // This is planned to be not needed, we will automatically unzip/untar the package for you
-    "cd mypackage-1.0.0", // This is also planned to not be needed, so that we can automatically patch for you if there are patches available
+  "patches": [ // This can be omitted from the file no problem, this is just optional
+    "http://example.com/nofstack.patch",
+    "http://example.com/security.patch"
+  ],
+  "build": [ // sources are extracted automatically no need for tar xvf tarbal.tar.xz or unzip
+    "cd mypackage-1.0.0", // head into the extract sources (it is automatically patched for you)
     "./configure",
     "make",
     "make install"  // Placeholder - actual installation would need to be defined.
@@ -64,7 +68,7 @@ Here is an example json package file for your viewing desires
 ```
 ### Running pms
 For now pms is very bare, with only four arguments that you can parse to it. You can only run build scripts for now following the mypackage.json example.
-```
+```bash
 $ pms --version
 pms - Pack My Sh*t version: 0.0.1-beta
 $ pms --help
@@ -74,8 +78,6 @@ Options:
     -v, --version   Display version information
 $ pms --quiet neofetch.json
 Fetching sources... Skipping download: 7.1.0.tar.gz already downloaded!
- Done!
-Fetching patches...  Done!
 neofetch-7.1.0/
 neofetch-7.1.0/.github/
 neofetch-7.1.0/.github/ISSUE_TEMPLATE.md
