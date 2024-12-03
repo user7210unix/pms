@@ -48,7 +48,7 @@ int parse_json_array(cJSON *root, Package *pkg, const char *field_name,
   cJSON *item = cJSON_GetObjectItemCaseSensitive(root, field_name);
   if (item && cJSON_IsArray(item)) {
     *count_ptr = cJSON_GetArraySize(item);
-    *field_ptr = calloc(*count_ptr, sizeof(char *));
+    *field_ptr = malloc(*count_ptr * sizeof(char *)); // saving cycles instead of zeroing memory
     if (*field_ptr) {
       for (size_t i = 0; i < *count_ptr; i++) {
         cJSON *array_item = cJSON_GetArrayItem(item, i);
@@ -152,7 +152,6 @@ int pull_files(const char *url, const char *filename, int quiet) {
     printf("Fetching Sources...\n");
   };
   CURL *curl = curl_easy_init();
-  CURLcode res = CURLE_FAILED_INIT;
 
   if (!curl) {
     return 1;
@@ -164,7 +163,7 @@ int pull_files(const char *url, const char *filename, int quiet) {
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
   curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
   curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-  res = curl_easy_perform(curl);
+  CURLcode res = curl_easy_perform(curl);
   curl_easy_cleanup(curl);
   fclose(source);
   if (quiet == 0) {
@@ -269,7 +268,7 @@ int check_root(void) {
   if (uid != 0) {
     fprintf(stderr, "PMS requires root privileges to install packages.\n");
     fprintf(stderr, "Please run with sudo/doas.\n");
-    return 1;
+    exit(1);
   }
   return 0;
 }
@@ -329,6 +328,7 @@ int main(int argc, char *argv[]) {
   }
 
   check_root();
+
   fetch_sources(&pkg, quiet);
   fetch_patches(&pkg, quiet);
 
