@@ -147,7 +147,22 @@ int execute_build(const Package *pkg, int quiet) {
       ret = chdir(pkg->build[i] + 3) ? (perror("chdir"), 1) : 0;
       continue;
     }
-    ret = system(pkg->build[i]) ? 1 : 0;
+
+    if (quiet == 1) {
+      // Rewrote the create download_dir to log_dir with less indents
+      struct stat st = {0};
+      int ret = stat(log_dir, &st);
+      if (ret == -1 && mkdir(log_dir, 0755) == -1) {
+        fprintf(stderr, "Error creating log directory %s\n", log_dir);
+        return 1;
+      }
+      char cmd[PATH_MAX * 2];
+      snprintf(cmd, sizeof(cmd), "%s >> %s/%s-%s-build.log 2>&1", pkg->build[i],
+               log_dir, pkg->pkgname, pkg->version);
+      ret = system(cmd) ? 1 : 0;
+    } else {
+      ret = system(pkg->build[i]) ? 1 : 0;
+    }
   }
 
   return chdir(cwd) ? (perror("chdir"), 1) : ret;
@@ -323,7 +338,8 @@ int extract_sources(const Package *pkg, int quiet) {
   return 0;
 }
 
-// Function to find (extracted) source directory (using glob, I wasn't sure on how else to do this)
+// Function to find (extracted) source directory (using glob, I wasn't sure on
+// how else to do this)
 char *find_source_directory(const Package *pkg, char *source_dir) {
   glob_t glob_result;
 
@@ -383,30 +399,32 @@ int apply_patches(const Package *pkg, int quiet) {
   return 0;
 }
 
-int cleanup_crap(Package pkg, int level) { // Clean up the sources and stuff depending on the level of clean you want
-    if (level < 0 || level > 2) {
-        fprintf(stderr, "Error: Invalid clean level specified (must be 0-2)\n");
-        return 1;
-    }
-
-    if (level == 0) {
-        return 0;
-    }
-
-    char cmd[PATH_MAX];
-    if (level == 1) {
-        char source_dir[PATH_MAX];
-        find_source_directory(&pkg, source_dir);
-        snprintf(cmd, sizeof(cmd), "rm -rf %s/%s", download_dir, source_dir);
-        return system(cmd);
-    }
-
-    if (level == 2) {
-        snprintf(cmd, sizeof(cmd), "rm -rf %s/*", download_dir);
-        return system(cmd);
-    }
-
+int cleanup_crap(Package pkg,
+                 int level) { // Clean up the sources and stuff depending on the
+                              // level of clean you want
+  if (level < 0 || level > 2) {
+    fprintf(stderr, "Error: Invalid clean level specified (must be 0-2)\n");
     return 1;
+  }
+
+  if (level == 0) {
+    return 0;
+  }
+
+  char cmd[PATH_MAX];
+  if (level == 1) {
+    char source_dir[PATH_MAX];
+    find_source_directory(&pkg, source_dir);
+    snprintf(cmd, sizeof(cmd), "rm -rf %s/%s", download_dir, source_dir);
+    return system(cmd);
+  }
+
+  if (level == 2) {
+    snprintf(cmd, sizeof(cmd), "rm -rf %s/*", download_dir);
+    return system(cmd);
+  }
+
+  return 1;
 }
 
 // Check for root privileges
@@ -429,8 +447,6 @@ int main(int argc, char *argv[]) {
   };
   int option_index = 0;
 
-  int quiet = 0;
-
   for (int opt; (opt = getopt_long(argc, argv, "h::", long_options,
                                    &option_index)) != -1;) {
 
@@ -439,7 +455,7 @@ int main(int argc, char *argv[]) {
       printf("Usage: %s [options] <pkgbuild.json>\n", argv[0]);
       printf("Options:\n");
       printf("    -h, --help      Display this help message\n");
-      printf("    -v, --version   Display version information\n");
+      printf("    -V, --version   Display version information\n");
       printf("    -q, --quiet,    Display less information about package "
              "downloading\n");
       return 0;
