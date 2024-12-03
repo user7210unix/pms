@@ -20,12 +20,9 @@ install:
 	cp $(TARGET) $(PREFIX)/bin/
 
 release:
-	git archive master --prefix=pms-$(VERSION)/ > pms-$(VERSION).tar
-	@rm -rf pms-$(VERSION)
-	tar -xf pms-$(VERSION).tar
-	@rm pms-$(VERSION).tar
-	cd pms-$(VERSION) && make clean
-	tar -cf - pms-$(VERSION) | xz > pms-$(VERSION).src.tar.xz
+	mkdir -p pms-$(VERSION)
+	cp -r *.c *.h Makefile config.mk LICENSE README.md pms-$(VERSION)/
+	tar -czf pms-$(VERSION).src.tar.gz pms-$(VERSION)
 	@rm -rf pms-$(VERSION)
 
 release-clean:
