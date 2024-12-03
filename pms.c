@@ -217,16 +217,18 @@ int fetch_sources(const Package *pkg, int quiet) {
     }
 
     if (quiet == 0) {
-      printf("%s Completed!", filename);
+      printf("%s Completed!\n", filename);
     }
   }
-  if (quiet == 1) {
-    printf(" Done!\n");
-  }
+
   return 0;
 }
 
 int fetch_patches(const Package *pkg, int quiet) {
+  if (pkg->patch_count == 0) { // if there are no patches, don't pull anything
+    return 0;
+  }
+
   if (quiet == 1) {
     printf("Fetching patches... ");
   }
@@ -265,7 +267,7 @@ int fetch_patches(const Package *pkg, int quiet) {
 
 int extract_sources(const Package *pkg, int quiet) {
   if (quiet == 1) {
-    printf("Extracting sources... ");
+    printf("Extracting sources...\n");
   }
 
   const char *filename;
@@ -315,6 +317,11 @@ int extract_sources(const Package *pkg, int quiet) {
 }
 
 int apply_patches(const Package *pkg, int quiet) {
+  if (pkg->patch_count == 0) { // There is no need to do any of this if there
+                               // isn't any patches in the first place
+    return 0;
+  }
+
   const char *filename;
   char cmd[PATH_MAX * 2];
 
@@ -323,7 +330,7 @@ int apply_patches(const Package *pkg, int quiet) {
     filename = filename ? filename + 1 : pkg->patches[i];
 
     if (quiet == 0) {
-      printf("Applying patch %s\n", filename);
+      printf("Applying patch... %s\n", filename);
     }
 
     snprintf(cmd, sizeof(cmd), "cd %s && patch -Np1 -i ../%s", download_dir,
@@ -335,7 +342,7 @@ int apply_patches(const Package *pkg, int quiet) {
   }
 
   if (quiet == 1) {
-    printf("Patching... Done!\n");
+    printf("Patching...Done!\n");
   }
 
   return 0;
