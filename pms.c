@@ -48,7 +48,8 @@ int parse_json_array(cJSON *root, Package *pkg, const char *field_name,
   cJSON *item = cJSON_GetObjectItemCaseSensitive(root, field_name);
   if (item && cJSON_IsArray(item)) {
     *count_ptr = cJSON_GetArraySize(item);
-    *field_ptr = malloc(*count_ptr * sizeof(char *)); // saving cycles instead of zeroing memory
+    *field_ptr = malloc(
+        *count_ptr * sizeof(char *)); // saving cycles instead of zeroing memory
     if (*field_ptr) {
       for (size_t i = 0; i < *count_ptr; i++) {
         cJSON *array_item = cJSON_GetArrayItem(item, i);
@@ -262,12 +263,88 @@ int fetch_patches(const Package *pkg, int quiet) {
   return 0;
 }
 
+int extract_sources(const Package *pkg, int quiet) {
+  if (quiet == 1) {
+    printf("Extracting sources... ");
+  }
+
+  const char *filename;
+  char full_path[PATH_MAX];
+  char cmd[PATH_MAX * 2];
+
+  for (size_t i = 0; i < pkg->source_count; i++) { // First untar/unzip sources
+    filename = strrchr(pkg->source[i], '/');
+    filename = filename ? filename + 1 : pkg->source[i];
+
+    snprintf(full_path, sizeof(full_path), "%s/%s", download_dir, filename);
+
+    struct {
+      const char *ext;
+      const char *fmt;
+    } cmds[] = {{".tar.gz", "tar xzf"},  {".tgz", "tar xzf"},
+                {".tar.xz", "tar xJf"},  {".txz", "tar xJf"},
+                {".tar.bz2", "tar xjf"}, {".zip", "unzip"}};
+
+    const char *fmt = NULL;
+    for (int i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
+      if (strstr(filename, cmds[i].ext)) {
+        fmt = cmds[i].fmt;
+        break;
+      }
+    }
+
+    if (!fmt) {
+      if (quiet == 0) {
+        printf("Skipping extraction for unsupported format: %s\n", filename);
+      }
+      continue;
+    }
+
+    snprintf(cmd, sizeof(cmd), "cd %s && %s %s", download_dir, fmt, filename);
+
+    if (quiet == 0) {
+      printf("Extracting %s\n", filename);
+    }
+
+    if (system(cmd) != 0) {
+      fprintf(stderr, "Failed to extract %s\n", filename);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int apply_patches(const Package *pkg, int quiet) {
+  const char *filename;
+  char cmd[PATH_MAX * 2];
+
+  for (size_t i = 0; i < pkg->patch_count; i++) {
+    filename = strrchr(pkg->patches[i], '/');
+    filename = filename ? filename + 1 : pkg->patches[i];
+
+    if (quiet == 0) {
+      printf("Applying patch %s\n", filename);
+    }
+
+    snprintf(cmd, sizeof(cmd), "cd %s && patch -Np1 -i ../%s", download_dir,
+             filename);
+    if (system(cmd)) {
+      fprintf(stderr, "Failed to apply patch %s\n", filename);
+      return 1;
+    }
+  }
+
+  if (quiet == 1) {
+    printf("Patching... Done!\n");
+  }
+
+  return 0;
+}
+
 // Check for root privileges
 int check_root(void) {
-  uid_t uid = getuid();
-  if (uid != 0) {
-    fprintf(stderr, "PMS requires root privileges to install packages.\n");
-    fprintf(stderr, "Please run with sudo/doas.\n");
+  if (getuid()) {
+    fputs("PMS requires root privileges. Run with sudo/doas.\n", stderr);
     exit(1);
   }
   return 0;
@@ -330,7 +407,9 @@ int main(int argc, char *argv[]) {
   check_root();
 
   fetch_sources(&pkg, quiet);
+  extract_sources(&pkg, quiet);
   fetch_patches(&pkg, quiet);
+  apply_patches(&pkg, quiet);
 
   // Implement dependency resolution here later, way too lazy for that for now
 
