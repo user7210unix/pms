@@ -333,7 +333,7 @@ int apply_patches(const Package *pkg, int quiet) {
       printf("Applying patch... %s\n", filename);
     }
 
-    snprintf(cmd, sizeof(cmd), "cd %s && patch -Np1 -i ../%s", download_dir,
+    snprintf(cmd, sizeof(cmd), "cd %s/%s* && patch -Np1 -i ../%s", download_dir, pkg->pkgname,
              filename);
     if (system(cmd)) {
       fprintf(stderr, "Failed to apply patch %s\n", filename);
