@@ -5,6 +5,7 @@
 #include <cjson/cJSON.h>
 #include <curl/curl.h>
 #include <getopt.h>
+#include <glob.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,7 @@
 // Structure to hold package information
 typedef struct {
   char *pkgname;
+  char *version;
   char **source;
   char **patches;
   char **build;
@@ -28,6 +30,7 @@ typedef struct {
 // Free everything :P
 void free_package(Package *pkg) {
   free(pkg->pkgname);
+  free(pkg->version);
   for (size_t i = 0; i < pkg->source_count; i++)
     free(pkg->source[i]);
   for (size_t i = 0; i < pkg->patch_count; i++)
@@ -106,6 +109,10 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
   // Extract sources, array handling
   cJSON *item = cJSON_GetObjectItemCaseSensitive(root, "pkgname");
   pkg->pkgname =
+      item && cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
+  // Extract version
+  cJSON *item1 = cJSON_GetObjectItemCaseSensitive(root, "version");
+  pkg->version =
       item && cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
 
   parse_json_array(root, pkg, "source", &pkg->source, &pkg->source_count);
@@ -280,7 +287,7 @@ int extract_sources(const Package *pkg, int quiet) {
 
     snprintf(full_path, sizeof(full_path), "%s/%s", download_dir, filename);
 
-    struct {
+    static const struct {
       const char *ext;
       const char *fmt;
     } cmds[] = {{".tar.gz", "tar xzf"},  {".tgz", "tar xzf"},
@@ -316,6 +323,31 @@ int extract_sources(const Package *pkg, int quiet) {
   return 0;
 }
 
+// Function to find (extracted) source directory (using glob, I wasn't sure on how else to do this)
+char *find_source_directory(const Package *pkg, char *source_dir) {
+  glob_t glob_result;
+
+  // Try with version first
+  snprintf(source_dir, PATH_MAX, "%s/%s-%s*", download_dir, pkg->pkgname,
+           pkg->version);
+
+  if (!glob(source_dir, GLOB_ERR, NULL, &glob_result) &&
+      glob_result.gl_pathc > 0) {
+    snprintf(source_dir, PATH_MAX, "%s",
+             strrchr(glob_result.gl_pathv[0], '/') + 1);
+  } else {
+    // Fallback if no exact version match
+    snprintf(source_dir, PATH_MAX, "%s/%s*", download_dir, pkg->pkgname);
+    if (!glob(source_dir, GLOB_ERR, NULL, &glob_result) &&
+        glob_result.gl_pathc > 0) {
+      snprintf(source_dir, PATH_MAX, "%s",
+               strrchr(glob_result.gl_pathv[0], '/') + 1);
+    }
+  }
+  globfree(&glob_result);
+  return source_dir;
+}
+
 int apply_patches(const Package *pkg, int quiet) {
   if (pkg->patch_count == 0) { // There is no need to do any of this if there
                                // isn't any patches in the first place
@@ -333,8 +365,11 @@ int apply_patches(const Package *pkg, int quiet) {
       printf("Applying patch... %s\n", filename);
     }
 
-    snprintf(cmd, sizeof(cmd), "cd %s/%s* && patch -Np1 -i ../%s", download_dir,
-             pkg->pkgname, filename);
+    char source_dir[PATH_MAX];
+    find_source_directory(pkg, source_dir);
+
+    snprintf(cmd, sizeof(cmd), "cd %s/%s && patch -Np1 -i ../%s", download_dir,
+             source_dir, filename);
     if (system(cmd)) {
       fprintf(stderr, "Failed to apply patch %s\n", filename);
       return 1;
@@ -346,6 +381,32 @@ int apply_patches(const Package *pkg, int quiet) {
   }
 
   return 0;
+}
+
+int cleanup_crap(Package pkg, int level) { // Clean up the sources and stuff depending on the level of clean you want
+    if (level < 0 || level > 2) {
+        fprintf(stderr, "Error: Invalid clean level specified (must be 0-2)\n");
+        return 1;
+    }
+
+    if (level == 0) {
+        return 0;
+    }
+
+    char cmd[PATH_MAX];
+    if (level == 1) {
+        char source_dir[PATH_MAX];
+        find_source_directory(&pkg, source_dir);
+        snprintf(cmd, sizeof(cmd), "rm -rf %s/%s", download_dir, source_dir);
+        return system(cmd);
+    }
+
+    if (level == 2) {
+        snprintf(cmd, sizeof(cmd), "rm -rf %s/*", download_dir);
+        return system(cmd);
+    }
+
+    return 1;
 }
 
 // Check for root privileges
@@ -421,6 +482,7 @@ int main(int argc, char *argv[]) {
   // Implement dependency resolution here later, way too lazy for that for now
 
   int ret = execute_build(&pkg, quiet);
+  cleanup_crap(pkg, clean_sources);
   free_package(&pkg);
   return ret;
 }
