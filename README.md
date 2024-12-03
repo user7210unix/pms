@@ -26,7 +26,9 @@ LearnixOS is moving to LFS based again! PMS is now the official package manager 
 - make
 - curl
 - cjson[^1]
-
+#### Runtime Dependencies
+- tar
+- unzip
 #### Optional dependencies
 - git (repo support and development versions of packages, which is coming soon)
 
