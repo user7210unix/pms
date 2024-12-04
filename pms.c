@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 // Structure to hold package information
@@ -148,7 +149,7 @@ int execute_build(const Package *pkg, int quiet) {
 
   int ret = 0;
   for (size_t i = 0; i < pkg->build_count && !ret; i++) {
-    if (quiet == 0) {
+    if (!quiet) {
       printf("Executing: %s\n", pkg->build[i]);
     }
 
@@ -157,16 +158,38 @@ int execute_build(const Package *pkg, int quiet) {
       continue;
     }
 
-    if (quiet == 1) {
-      char cmd[PATH_MAX * 2];
-      snprintf(cmd, sizeof(cmd), "%s >> %s/%s-%s-build.log-%zu 2>&1", pkg->build[i],
-               log_dir, pkg->pkgname, pkg->version, i);
-      ret = system(cmd) ? 1 : 0;
+    // guhh it's so messy for now, but the thing now has a funny ... loading
+    // thing while it's executing stuff. I'll optimize it later, maybe ewheeler
+    // could help me?
+    pid_t pid;
+    int status;
+    char cmd[PATH_MAX * 2];
+
+    if (quiet) {
+      int dots = 0;
+      snprintf(cmd, sizeof(cmd), "%s >> %s/%s-%s-build.log-%zu 2>&1",
+               pkg->build[i], log_dir, pkg->pkgname, pkg->version, i);
+
+      while (waitpid(pid, &status, WNOHANG) == 0) {
+        printf("\rExecuting%.*s   \r", dots + 1, "...");
+        fflush(stdout);
+        dots = (dots + 1) % 3;
+        usleep(500000);
+      }
+      printf("\r                \r");
+
     } else {
-      ret = system(pkg->build[i]) ? 1 : 0;
+      snprintf(cmd, sizeof(cmd), "%s", pkg->build[i]);
     }
+
+    if ((pid = fork()) == 0) {
+      _exit(system(cmd) ? 1 : 0);
+    }
+
+    ret = WIFEXITED(status) ? WEXITSTATUS(status) : 1;
   }
 
+  printf("Done!\n");
   return chdir(cwd) ? (perror("chdir"), 1) : ret;
 }
 
