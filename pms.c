@@ -112,7 +112,7 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
   pkg->pkgname =
       item && cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
   // Extract version
-  cJSON *item1 = cJSON_GetObjectItemCaseSensitive(root, "version");
+  item = cJSON_GetObjectItemCaseSensitive(root, "version");
   pkg->version =
       item && cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
 
@@ -170,20 +170,33 @@ int execute_build(const Package *pkg, int quiet) {
       snprintf(cmd, sizeof(cmd), "%s >> %s/%s-%s-build.log-%zu 2>&1",
                pkg->build[i], log_dir, pkg->pkgname, pkg->version, i);
 
-      while (waitpid(pid, &status, WNOHANG) == 0) {
+      if ((pid = fork()) == 0) {
+        _exit(system(cmd) ? 1 : 0);
+      }
+
+      while ((ret = waitpid(pid, &status, WNOHANG)) == 0) {
         printf("\rExecuting%.*s   \r", dots + 1, "...");
         fflush(stdout);
         dots = (dots + 1) % 3;
         usleep(500000);
       }
+
+      if (ret == -1) {
+        break;
+      }
+
       printf("\r                \r");
 
     } else {
       snprintf(cmd, sizeof(cmd), "%s", pkg->build[i]);
-    }
 
-    if ((pid = fork()) == 0) {
-      _exit(system(cmd) ? 1 : 0);
+      if ((pid = fork()) == 0) {
+        _exit(system(cmd) ? 1 : 0);
+      }
+
+      if (waitpid(pid, &status, 0) == -1) {
+        break;
+      }
     }
 
     ret = WIFEXITED(status) ? WEXITSTATUS(status) : 1;
