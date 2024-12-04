@@ -137,6 +137,15 @@ int execute_build(const Package *pkg, int quiet) {
   if (chdir(download_dir))
     return (perror("chdir"), 1);
 
+  if (quiet == 1) {
+    struct stat st = {0}; // yes this is copied from download_dir
+    int ret = stat(log_dir, &st);
+    if (ret == -1 && mkdir(log_dir, 0755) == -1) {
+      fprintf(stderr, "Error creating log directory %s\n", log_dir);
+      return 1;
+    }
+  }
+
   int ret = 0;
   for (size_t i = 0; i < pkg->build_count && !ret; i++) {
     if (quiet == 0) {
@@ -149,16 +158,9 @@ int execute_build(const Package *pkg, int quiet) {
     }
 
     if (quiet == 1) {
-      // Rewrote the create download_dir to log_dir with less indents
-      struct stat st = {0};
-      int ret = stat(log_dir, &st);
-      if (ret == -1 && mkdir(log_dir, 0755) == -1) {
-        fprintf(stderr, "Error creating log directory %s\n", log_dir);
-        return 1;
-      }
       char cmd[PATH_MAX * 2];
-      snprintf(cmd, sizeof(cmd), "%s >> %s/%s-%s-build.log 2>&1", pkg->build[i],
-               log_dir, pkg->pkgname, pkg->version);
+      snprintf(cmd, sizeof(cmd), "%s >> %s/%s-%s-build.log-%zu 2>&1", pkg->build[i],
+               log_dir, pkg->pkgname, pkg->version, i);
       ret = system(cmd) ? 1 : 0;
     } else {
       ret = system(pkg->build[i]) ? 1 : 0;
@@ -206,12 +208,10 @@ int fetch_sources(const Package *pkg, int quiet) {
   // Check if download_dir exists and create if needed | Segment fault if it
   // doesn't exist :sob:
   struct stat st = {0};
-  if (stat(download_dir, &st) == -1) {
-    if (mkdir(download_dir, 0755) ==
-        -1) { // Read+execute access for normal users
-      fprintf(stderr, "Error creating download directory %s\n", download_dir);
-      return 1;
-    }
+  int ret = stat(download_dir, &st); // less indents
+  if (ret == -1 && mkdir(download_dir, 0755) == -1) {
+    fprintf(stderr, "Error creating download directory %s\n", download_dir);
+    return 1;
   }
 
   const char *filename;
