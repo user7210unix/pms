@@ -20,7 +20,7 @@ const int force_download = 0;
 static int quiet = 0; // 0 - verbose, 1 - stfu
 
 // Repository support (still needs to be implemented)
-#define REPO_SUPPORT 1 // 0 - ONLY BUILDJSON! 1 - gib me repo support!
+#define REPO_SUPPORT 0 // 0 - ONLY BUILDJSON! 1 - gib me repo support!
 
 // Repositories (ONLY GIT REPOS)
 const char* const repo_urls[] = {
