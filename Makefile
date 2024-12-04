@@ -22,7 +22,7 @@ install:
 release:
 	mkdir -p pms-$(VERSION)
 	cp -r *.c *.h Makefile config.mk LICENSE README.md pms-$(VERSION)/
-	tar -czf pms-$(VERSION).src.tar.gz pms-$(VERSION)
+	tar -czf pms-$(VERSION).src.tar.xz pms-$(VERSION)
 	@rm -rf pms-$(VERSION)
 
 release-clean:
