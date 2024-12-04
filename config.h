@@ -19,4 +19,12 @@ const int force_download = 0;
 // Ommit the quiet flag and permanetly shut up pms
 static int quiet = 0; // 0 - verbose, 1 - stfu
 
+// Repository support (still needs to be implemented)
+#define REPO_SUPPORT 1 // 0 - ONLY BUILDJSON! 1 - gib me repo support!
+
+// Repositories (ONLY GIT REPOS)
+const char* const repo_urls[] = {
+    "https://github.com/LearnixOS/lxos-repo",
+};
+
 #endif // CONFIG_H_

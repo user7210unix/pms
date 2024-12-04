@@ -2,6 +2,10 @@
 
 #include "config.h"
 
+#if REPO_SUPPORT
+#include "repo.c"
+#endif
+
 #include <cjson/cJSON.h>
 #include <curl/curl.h>
 #include <getopt.h>
@@ -512,17 +516,27 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  Package pkg = {0};
+
+#if !REPO_SUPPORT
   if (optind >= argc) { // Check if a pkgbuild.json file was provided
     fprintf(stderr, "Missing pkgbuild.json argument\n");
     return 1;
   }
 
-  Package pkg = {0};
-  parse_pkgbuild(argv[optind], &pkg);
   if (parse_pkgbuild(argv[optind], &pkg) != 0) {
     fprintf(stderr, "Error parsing pkgbuild.json\n");
     return 1;
   }
+#endif
+
+#if REPO_SUPPORT
+  // Check if repo urls has been configured - exit if none are set
+  if (!repo_urls[0]) {
+    fprintf(stderr, "Error: repo_urls is not set\n");
+    return 1;
+  }
+#endif
 
   check_root();
 
