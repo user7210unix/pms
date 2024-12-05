@@ -1,6 +1,8 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#include <string.h>
+
 // Progress bar color
 const unsigned long int PROGRESS_BAR_COLOR = 0xffffff;
 
@@ -22,9 +24,13 @@ static int quiet = 0; // 0 - verbose, 1 - stfu
 // Repository support (still needs to be implemented)
 #define REPO_SUPPORT 0 // 0 - ONLY BUILDJSON! 1 - gib me repo support!
 
+// Repo Dir, where the repo is stored
+const char repo_dir[] = "/build_dir/repos";
+
 // Repositories (ONLY GIT REPOS)
-const char* const repo_urls[] = {
+static const char *repo_urls[] = {
     "https://github.com/LearnixOS/lxos-repo",
+    NULL
 };
 
 #endif // CONFIG_H_

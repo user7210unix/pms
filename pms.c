@@ -1,36 +1,11 @@
 #define VERSION "0.9.9-PREVIEW"
 
 #include "config.h"
+#include "util.h"
 
 #if REPO_SUPPORT
 #include "repo.c"
 #endif
-
-#include <cjson/cJSON.h>
-#include <curl/curl.h>
-#include <getopt.h>
-#include <glob.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-// Structure to hold package information
-typedef struct {
-  char *pkgname;
-  char *version;
-  char **source;
-  char **patches;
-  char **build;
-  char **depends;
-
-  size_t source_count;
-  size_t patch_count;
-  size_t build_count;
-  size_t depends_count;
-} Package;
 
 // Free everything :P
 void free_package(Package *pkg) {
@@ -39,7 +14,7 @@ void free_package(Package *pkg) {
   for (size_t i = 0; i < pkg->source_count; i++)
     free(pkg->source[i]);
   for (size_t i = 0; i < pkg->patch_count; i++)
-    free(pkg->source[i]);
+    free(pkg->patches[i]);
   for (size_t i = 0; i < pkg->build_count; i++)
     free(pkg->build[i]);
   for (size_t i = 0; i < pkg->depends_count; i++)
@@ -54,25 +29,42 @@ void free_package(Package *pkg) {
 int parse_json_array(cJSON *root, Package *pkg, const char *field_name,
                      char ***field_ptr, size_t *count_ptr) {
   cJSON *item = cJSON_GetObjectItemCaseSensitive(root, field_name);
-  if (item && cJSON_IsArray(item)) {
-    *count_ptr = cJSON_GetArraySize(item);
-    *field_ptr = malloc(
-        *count_ptr * sizeof(char *)); // saving cycles instead of zeroing memory
-    if (*field_ptr) {
-      for (size_t i = 0; i < *count_ptr; i++) {
-        cJSON *array_item = cJSON_GetArrayItem(item, i);
-        if (cJSON_IsString(array_item)) {
-          (*field_ptr)[i] = strdup(array_item->valuestring);
-        } else {
-          fprintf(stderr, "Error: Non-string value found in array\n");
-          return 1;
-        }
-      }
-    }
-  } else {
+  if (!item || !cJSON_IsArray(item)) {
     *count_ptr = 0;
     *field_ptr = NULL;
+    return 0;
   }
+  *count_ptr = cJSON_GetArraySize(item);
+  if (*count_ptr == 0) {
+    *field_ptr = NULL;
+    return 0;
+  }
+  *field_ptr = malloc(*count_ptr * sizeof(char *));
+  if (*field_ptr == NULL) {
+    return 1;
+  }
+  for (size_t i = 0; i < *count_ptr; i++) {
+    cJSON *array_item = cJSON_GetArrayItem(item, i);
+    if (!cJSON_IsString(array_item)) {
+      fprintf(stderr, "Error: Non-string value found in array\n");
+      for (size_t j = 0; j < i; j++) {
+        free((*field_ptr)[j]);
+      }
+      free(*field_ptr);
+      *field_ptr = NULL;
+      return 1;
+    }
+    (*field_ptr)[i] = strdup(array_item->valuestring);
+    if ((*field_ptr)[i] == NULL) {
+      for (size_t j = 0; j < i; j++) {
+        free((*field_ptr)[j]);
+      }
+      free(*field_ptr);
+      *field_ptr = NULL;
+      return 1;
+    }
+  }
+
   return 0;
 }
 
@@ -107,18 +99,16 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
   cJSON *root = cJSON_Parse(buffer);
   free(buffer); // Free the file buffer
   if (!root) {
-    fprintf(stderr, "cJSON_Parse: %s\n", cJSON_GetErrorPtr());
+    fprintf(stderr, "cJSON_Parse Error Parsing: %s\n", cJSON_GetErrorPtr());
     return 1;
   }
 
   // Extract sources, array handling
   cJSON *item = cJSON_GetObjectItemCaseSensitive(root, "pkgname");
-  pkg->pkgname =
-      item && cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
+  pkg->pkgname = cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
   // Extract version
   item = cJSON_GetObjectItemCaseSensitive(root, "version");
-  pkg->version =
-      item && cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
+  pkg->version = cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
 
   parse_json_array(root, pkg, "source", &pkg->source, &pkg->source_count);
   parse_json_array(root, pkg, "patches", &pkg->patches, &pkg->patch_count);
@@ -186,6 +176,7 @@ int execute_build(const Package *pkg, int quiet) {
       }
 
       if (ret == -1) {
+        perror("waitpid"); // Add error checking for waitpid
         break;
       }
 
@@ -199,6 +190,7 @@ int execute_build(const Package *pkg, int quiet) {
       }
 
       if (waitpid(pid, &status, 0) == -1) {
+        perror("waitpid"); // Add error checking for waitpid
         break;
       }
     }
@@ -223,6 +215,12 @@ int pull_files(const char *url, const char *filename, int quiet) {
   }
 
   FILE *source = fopen(filename, "w");
+  if (!source) {
+    perror("fopen");
+    curl_easy_cleanup(curl);
+    return 1;
+  }
+
   curl_easy_setopt(curl, CURLOPT_URL, url);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, source);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -315,10 +313,8 @@ int fetch_patches(const Package *pkg, int quiet) {
       return 1;
     }
 
-    pull_files(pkg->patches[i], full_path, quiet);
-
     if (quiet == 0) {
-      printf("%s Completed!", filename);
+      printf("%s Completed!\n", filename);
     }
   }
   if (quiet == 1) {
@@ -350,9 +346,10 @@ int extract_sources(const Package *pkg, int quiet) {
                 {".tar.bz2", "tar xjf"}, {".zip", "unzip"}};
 
     const char *fmt = NULL;
-    for (int i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
-      if (strstr(filename, cmds[i].ext)) {
-        fmt = cmds[i].fmt;
+    for (size_t j = 0; j < sizeof(cmds) / sizeof(cmds[0]);
+         j++) { // Changed i to j to avoid shadowing
+      if (strstr(filename, cmds[j].ext)) {
+        fmt = cmds[j].fmt;
         break;
       }
     }
@@ -439,9 +436,9 @@ int apply_patches(const Package *pkg, int quiet) {
   return 0;
 }
 
-int cleanup_crap(Package pkg,
-                 int level) { // Clean up the sources and stuff depending on the
-                              // level of clean you want
+// Clean up the sources and stuff depending on the
+// level of clean you want
+int cleanup_crap(Package pkg, int level) {
   if (level < 0 || level > 2) {
     fprintf(stderr, "Error: Invalid clean level specified (must be 0-2)\n");
     return 1;
@@ -486,9 +483,12 @@ int main(int argc, char *argv[]) {
       {0, 0, 0, 0} // Null terminator for the long_options array
   };
   int option_index = 0;
+  int quiet = 0; // Initialize quiet
 
-  for (int opt; (opt = getopt_long(argc, argv, "h::", long_options,
-                                   &option_index)) != -1;) {
+  for (int opt;
+       (opt = getopt_long(argc, argv, "hVBq::",
+                          long_options, // Added V, B, q to getopt string
+                          &option_index)) != -1;) {
 
     switch (opt) {
     case 'h': // Help option
@@ -496,7 +496,9 @@ int main(int argc, char *argv[]) {
       printf("Options:\n");
       printf("    -h, --help      Display this help message\n");
       printf("    -V, --version   Display version information\n");
-      printf("    -q, --quiet,    Display less information about package "
+      printf(
+          "    -B, --box       Display a box\n"); // Added documentation for -B
+      printf("    -q, --quiet     Display less information about package "
              "downloading\n");
       return 0;
     case 'V': // Version option
@@ -507,7 +509,7 @@ int main(int argc, char *argv[]) {
       return 0;
     case 'q':
       quiet = 1;
-      continue;
+      break;  // Changed continue to break
     case '?': // Invalid option
       fprintf(stderr, "Unknown option: %s\n", argv[optind - 1]);
       return 1;
@@ -530,11 +532,39 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-#if REPO_SUPPORT
-  // Check if repo urls has been configured - exit if none are set
+#if REPO_SUPPORT // I still need to still implement search_all_repos
+  // Check if repo urls has been configured - exit if none are set (just in
+  // case)
   if (!repo_urls[0]) {
     fprintf(stderr, "Error: repo_urls is not set\n");
     return 1;
+  }
+
+  // Handle the case where user passed a package name with version
+  char *pkg_name = argv[optind];
+  char *pkg_version = NULL;
+
+  // Check if the package name contains a version (pkgname::version format)
+  char *version_delim = strstr(pkg_name, "::");
+  if (version_delim) {
+    *version_delim = '\0';           // Terminate the pkgname string
+    pkg_version = version_delim + 2; // Version part starts after "::"
+  }
+
+  // Search for the package in the repositories
+  if (pkg_version) {
+    // User provided a version, search for that specific version
+    if (search_all_repos(pkg_name, pkg_version, &pkg) != 0) {
+      fprintf(stderr, "Package '%s' version '%s' not found in repositories.\n",
+              pkg_name, pkg_version);
+      return 1;
+    }
+  } else {
+    // No version specified, search for the latest version
+    if (search_all_repos(pkg_name, NULL, &pkg) != 0) {
+      fprintf(stderr, "Package '%s' not found in any repository.\n", pkg_name);
+      return 1;
+    }
   }
 #endif
 
