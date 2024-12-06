@@ -18,7 +18,7 @@ const int clean_sources = 0; // 0 - no cleaning, 1 - clean extracted only, 3 - P
 // Force download disabled by default, this will continue downloading even if there is an error, NOT RECOMMENDED TO TOGGLE ON
 const int force_download = 0;
 
-// Ommit the quiet flag and permanetly shut up pms
+// Omit the quiet flag and permanently shut up pms
 static int quiet = 0; // 0 - verbose, 1 - stfu
 
 // Repository support (still needs to be implemented)
@@ -28,7 +28,7 @@ static int quiet = 0; // 0 - verbose, 1 - stfu
 const char repo_dir[] = "/build_dir/repos";
 
 // Repositories (ONLY GIT REPOS)
-static const char *repo_urls[] = {
+static const char * const repo_urls[] = {
     "https://github.com/LearnixOS/lxos-repo",
     NULL
 };

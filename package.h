@@ -1,5 +1,5 @@
-#ifndef UTIL_H_
-#define UTIL_H_
+#ifndef PACKAGE_H_
+#define PACKAGE_H_
 
 #include <cjson/cJSON.h>
 #include <curl/curl.h>

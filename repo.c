@@ -1,5 +1,4 @@
 #include "repo.h"
-#include "config.h"
 
 #include <curl/curl.h>
 #include <dirent.h>
@@ -9,53 +8,6 @@
 
 static Repository *repositories = NULL; // Array of repositories
 static size_t repo_count = 0;
-
-int init_repositories(void) {
-  // Check if repo_urls has any elements
-  if (repo_urls[0] == NULL) {
-    fprintf(stderr, "Repository URLs are not defined in config.h.\n");
-    return 1; // Error: Configuration issue
-  }
-
-  // Count the number of repositories
-  size_t count = 0;
-  while (repo_urls[count] != NULL) {
-    count++;
-  }
-
-  if (count == 0) {
-    fprintf(stderr, "No repositories configured in config.h.\n");
-    return 1; // Error: No repositories defined
-  }
-
-  // Allocate memory for repositories
-  Repository *repos = malloc(count * sizeof(Repository));
-  if (!repos) {
-    fprintf(stderr, "Memory allocation failed for repositories.\n");
-    return 1; // Error: Allocation failure
-  }
-
-  // Populate repository data
-  for (size_t i = 0; i < count; i++) {
-    repos[i].url = repo_urls[i];
-  }
-
-  // Assign global state only after successful initialization
-  repositories = repos;
-  repo_count = count;
-
-  fprintf(stdout, "Initialized %zu repositories successfully.\n", repo_count);
-  return 0; // Success
-}
-
-// Free resources used by repositories
-void cleanup_repositories(void) {
-  if (repositories) {
-    free(repositories);
-    repositories = NULL;
-  }
-  repo_count = 0;
-}
 
 // Compare versions (used in finding the latest version of the package)
 int compare_version(const char *v1, const char *v2) { return strcmp(v1, v2); }
@@ -77,16 +29,26 @@ int clone_repository(const char *repo_url, const char *repo_dir) {
 
   // Remove .git extension if present
   size_t name_len = strlen(repo_name);
-  char *clean_repo_name = malloc(name_len + 1);
-  if (!clean_repo_name) {
-    fprintf(stderr, "Failed to allocate memory for repo name\n");
-    return 1;
-  }
-  memcpy(clean_repo_name, repo_name, name_len + 1);
-  char *git_ext = strstr(clean_repo_name, ".git");
-  if (git_ext) {
-    *git_ext = '\0';
-    name_len = strlen(clean_repo_name);
+  size_t git_suffix_len = strlen(".git");
+  char *clean_repo_name;
+
+  if (name_len > git_suffix_len &&
+      strncmp(repo_name + name_len - git_suffix_len, ".git", git_suffix_len) ==
+          0) {
+    clean_repo_name = malloc(name_len - git_suffix_len + 1);
+    if (!clean_repo_name) {
+      fprintf(stderr, "Failed to allocate memory for repo name\n");
+      return 1;
+    }
+    strncpy(clean_repo_name, repo_name, name_len - git_suffix_len);
+    clean_repo_name[name_len - git_suffix_len] = '\0';
+    name_len = name_len - git_suffix_len;
+  } else {
+    clean_repo_name = strdup(repo_name);
+    if (!clean_repo_name) {
+      fprintf(stderr, "Failed to allocate memory for repo name\n");
+      return 1;
+    }
   }
 
   // Construct full repo path

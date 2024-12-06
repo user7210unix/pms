@@ -13,18 +13,18 @@ options:
 	@echo "CC          = $(CC)"
 
 clean:
-	rm -f $(PREFIX)/bin/$(TARGET)
-	rm -f $(TARGET)
+	@rm -f $(PREFIX)/bin/$(TARGET)
+	@rm -f $(TARGET)
 
 install:
 	cp $(TARGET) $(PREFIX)/bin/
 
 release:
-	mkdir -p pms-$(VERSION)
-	cp -r *.c *.h Makefile config.mk LICENSE README.md pms-$(VERSION)/
-	tar -czf pms-$(VERSION).src.tar.xz pms-$(VERSION)
+	@mkdir -p pms-$(VERSION)
+	@cp -r *.c *.h Makefile config.mk LICENSE README.md pms-$(VERSION)/
+	@tar -czf pms-$(VERSION).src.tar.xz pms-$(VERSION)
 	@rm -rf pms-$(VERSION)
 
 release-clean:
-	rm -f pms-$(VERSION).src.tar.xz
-	rm -rf pms-$(VERSION)
+	@rm -f pms-$(VERSION).src.tar.xz
+	@rm -rf pms-$(VERSION)

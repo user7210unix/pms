@@ -1,10 +1,8 @@
-#define VERSION "0.9.9-PREVIEW"
-
 #include "config.h"
-#include "util.h"
+#include "package.h"
 
 #if REPO_SUPPORT
-#include "repo.c"
+#include "repo.h"
 #endif
 
 // Free everything :P
@@ -176,7 +174,7 @@ int execute_build(const Package *pkg, int quiet) {
       }
 
       if (ret == -1) {
-        perror("waitpid"); // Add error checking for waitpid
+        perror("waitpid");
         break;
       }
 
@@ -202,8 +200,6 @@ int execute_build(const Package *pkg, int quiet) {
   return chdir(cwd) ? (perror("chdir"), 1) : ret;
 }
 
-// Renamed fetch_tarball to pull_files, mostly because we are using this for the
-// patches too
 int pull_files(const char *url, const char *filename, int quiet) {
   if (quiet == 0) {
     printf("Fetching Sources...\n");
@@ -483,7 +479,6 @@ int main(int argc, char *argv[]) {
       {0, 0, 0, 0} // Null terminator for the long_options array
   };
   int option_index = 0;
-  int quiet = 0; // Initialize quiet
 
   for (int opt;
        (opt = getopt_long(argc, argv, "hVBq::",
@@ -509,7 +504,7 @@ int main(int argc, char *argv[]) {
       return 0;
     case 'q':
       quiet = 1;
-      break;  // Changed continue to break
+      break;
     case '?': // Invalid option
       fprintf(stderr, "Unknown option: %s\n", argv[optind - 1]);
       return 1;

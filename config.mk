@@ -1,15 +1,15 @@
 # PMS - Pack My Sh*t
 #
 # Developer: cowmonk
-# Contributor(s): kirwano
+# Contributor(s): kirwano, localspook
 #
 
 VERSION = 0.9.9-preview
 
 ### Compiler Flags & default C compiler
 
-# CFLAGS = -s -pedantic -Wall -Os
-CFLAGS = -g -pedantic -Wall -Os
+# CFLAGS = -std=c99 -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700L -DVERSION=\"${VERSION}\" -s -pedantic -Wall -Os
+CFLAGS = -std=c99 -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700L -DVERSION=\"${VERSION}\" -g -pedantic -Wall -Os
 # INCLUDES =
 # LDFLAGS =
 CC=cc
