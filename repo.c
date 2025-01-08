@@ -1,4 +1,5 @@
 #include "repo.h"
+#include "package.h"
 
 #include <curl/curl.h>
 #include <dirent.h>
@@ -153,9 +154,80 @@ int find_latest_version_file(const char *package_name,
 // Search for a package across all repositories
 int search_all_repos(const char *package_name, const char *version,
                      Package *pkg) {
+  for (size_t i = 0; i < repo_count; ++i) {
+    Repository *repo = &repositories[i];
 
-  // Plan: if version == NULL, we find the latest version, if version is given
-  // (i.e. pkgname::version), we find the version and parse it as normal
+    // Construct the expected package directory path
+    size_t pkg_dir_len = strlen(repo->repo_dir) + strlen(repo->category) +
+                         strlen(package_name) + 3; // +3 for two / and \0
+    char *pkg_dir = malloc(pkg_dir_len);
+    if (!pkg_dir) {
+      fprintf(stderr, "Memory allocation failed\n");
+      return 1;
+    }
+    snprintf(pkg_dir, pkg_dir_len, "%s/%s/%s", repo->repo_dir, repo->category,
+             package_name);
 
-  return 0; // To be implemented in a search alg
+    char latest_version_file[FILENAME_MAX];
+    if (version == NULL) {
+      // Find the latest version
+      if (find_latest_version_file(package_name, latest_version_file,
+                                   sizeof(latest_version_file), pkg_dir) == 0) {
+        // Construct the full path to the latest version file
+        size_t filepath_len = strlen(pkg_dir) + strlen(latest_version_file) + 2;
+        char *filepath = malloc(filepath_len);
+        if (!filepath) { // Debugging purposes
+          fprintf(stderr, "Memory allocation failed: filepath\n");
+          free(pkg_dir);
+          return 1;
+        }
+
+        snprintf(filepath, filepath_len, "%s/%s", pkg_dir, latest_version_file);
+
+        if (parse_pkgbuild(filepath, pkg) == 0) {
+          free(filepath);
+          free(pkg_dir);
+          return 0;
+        }
+        free(filepath);
+      }
+    } else {
+      // Use the specified version
+      size_t filename_len =
+          strlen(package_name) + strlen(version) + strlen(".json") + 2;
+      char *filename = malloc(filename_len);
+
+      if (!filename) { // Debugging
+        fprintf(stderr, "Memory allocation failed: filename\n");
+        free(pkg_dir);
+        return 1;
+      }
+
+      snprintf(filename, filename_len, "%s-%s.json", package_name, version);
+
+      size_t filepath_len = strlen(pkg_dir) + strlen(filename) + 2;
+      char *filepath = malloc(filepath_len);
+      if (!filepath) { // Debugging
+        fprintf(stderr, "Memory allocation failed: filepath\n");
+        free(pkg_dir);
+        free(filename);
+        return 1;
+      }
+
+      snprintf(filepath, filepath_len, "%s/%s", pkg_dir, filename);
+
+      if (parse_pkgbuild(filepath, pkg) == 0) {
+        free(filepath);
+        free(filename);
+        free(pkg_dir);
+        return 0; // Package found
+      }
+
+      free(filepath);
+      free(filename);
+    }
+    free(pkg_dir);
+  }
+
+  return 1; // Package not found
 }

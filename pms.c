@@ -526,7 +526,7 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-#if REPO_SUPPORT // I still need to still implement search_all_repos
+#if REPO_SUPPORT
   // Check if repo urls has been configured - exit if none are set (just in
   // case)
   if (!repo_urls[0]) {

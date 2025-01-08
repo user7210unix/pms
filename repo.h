@@ -10,10 +10,12 @@
 typedef struct {
   const char *name; // Repository name
   const char *url; // Repository URL
+  char *repo_dir;
+  const char *category;
 } Repository;
 
 // Function declarations
 int search_all_repos(const char *package_name, const char *version,
-                     Package *pkg); // Search for a package across all repos
+                     Package *pkg);
 
 #endif // REPO_H_
