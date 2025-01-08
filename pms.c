@@ -68,12 +68,10 @@ int parse_json_array(cJSON *root, Package *pkg, const char *field_name,
 
 // Function to parse the JSON PKGBUILD
 int parse_pkgbuild(const char *filename, Package *pkg) {
-  int ret = 1;
-
   FILE *fp = fopen(filename, "rb"); // Read in binary mode for portability
   if (!fp) {
     perror("fopen");
-    goto exit1;
+    return 1;
   }
 
   fseek(fp, 0, SEEK_END);
@@ -83,19 +81,24 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
   char *buffer = malloc(file_size + 1);
   if (!buffer) {
     perror("malloc");
-    goto exit2;
+    fclose(fp);
+    return 1;
   }
 
   if (fread(buffer, 1, file_size, fp) != file_size) {
     perror("fread");
-    goto exit3;
+    fclose(fp);
+    free(buffer);
+    return 1;
   }
+  fclose(fp);
   buffer[file_size] = '\0';
 
   cJSON *root = cJSON_Parse(buffer);
+  free(buffer); // Free the file buffer
   if (!root) {
     fprintf(stderr, "cJSON_Parse Error Parsing: %s\n", cJSON_GetErrorPtr());
-    goto exit3;
+    return 1;
   }
 
   // Extract sources, array handling
@@ -105,15 +108,13 @@ int parse_pkgbuild(const char *filename, Package *pkg) {
   item = cJSON_GetObjectItemCaseSensitive(root, "version");
   pkg->version = cJSON_IsString(item) ? strdup(item->valuestring) : NULL;
 
-  // ...
-  ret = 0;
-  cJSON_Delete(root);
-exit3:
-  free(buffer);
-exit2:
-  fclose(fp);
-exit1:
-  return ret;
+  parse_json_array(root, pkg, "source", &pkg->source, &pkg->source_count);
+  parse_json_array(root, pkg, "patches", &pkg->patches, &pkg->patch_count);
+  parse_json_array(root, pkg, "build", &pkg->build, &pkg->build_count);
+  parse_json_array(root, pkg, "depends", &pkg->depends, &pkg->depends_count);
+
+  cJSON_Delete(root); // Free cJSON data structure
+  return 0;
 }
 
 // Function to execute build commands : UPDATE - it now changes directory to the
