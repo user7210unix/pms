@@ -1,11 +1,11 @@
 #include "repo.h"
-#include "package.h"
 
 #include <curl/curl.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "config.h"
 
 static Repository *repositories = NULL; // Array of repositories
 static size_t repo_count = 0;
@@ -158,14 +158,14 @@ int search_all_repos(const char *package_name, const char *version,
     Repository *repo = &repositories[i];
 
     // Construct the expected package directory path
-    size_t pkg_dir_len = strlen(repo->repo_dir) + strlen(repo->category) +
+    size_t pkg_dir_len = strlen(repo_dir) + strlen(repo->name) +
                          strlen(package_name) + 3; // +3 for two / and \0
     char *pkg_dir = malloc(pkg_dir_len);
     if (!pkg_dir) {
-      fprintf(stderr, "Memory allocation failed\n");
+      fprintf(stderr, "Memory allocation failed: pkg_dir\n");
       return 1;
     }
-    snprintf(pkg_dir, pkg_dir_len, "%s/%s/%s", repo->repo_dir, repo->category,
+    snprintf(pkg_dir, pkg_dir_len, "%s/%s/%s", repo_dir, repo->name,
              package_name);
 
     char latest_version_file[FILENAME_MAX];

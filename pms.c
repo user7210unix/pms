@@ -1,5 +1,5 @@
-#include "config.h"
 #include "package.h"
+#include "config.h"
 
 #if REPO_SUPPORT
 #include "repo.h"

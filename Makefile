@@ -3,8 +3,15 @@
 
 include config.mk
 
-pms: pms.c
-	$(CC) $(CFLAGS) $(INCLUDES) pms.c -o $(TARGET) $(LDFLAGS) -lcjson -lcurl
+pms: pms.o repo.o
+	$(CC) $(CFLAGS) $(INCLUDES) pms.o repo.o -o $(TARGET) $(LDFLAGS) -lcjson -lcurl
+	@rm pms.o repo.o
+
+pms.o: pms.c config.h
+	$(CC) $(CFLAGS) -c pms.c
+
+repo.o: repo.c repo.h config.h
+	$(CC) $(CFLAGS) -c repo.c
 
 options:
 	@echo pms build options:
