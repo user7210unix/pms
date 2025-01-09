@@ -1,5 +1,5 @@
-#include "package.h"
 #include "config.h"
+#include "package.h"
 
 #if REPO_SUPPORT
 #include "repo.h"
@@ -487,7 +487,10 @@ int main(int argc, char *argv[]) {
 
     switch (opt) {
     case 'h': // Help option
-      printf("Usage: %s [options] <pkgbuild.json>\n", argv[0]);
+      printf("Usage: %s [options] %s\n", argv[0],
+             REPO_SUPPORT ? "<pkgname> | <pkgname::version>"
+                          : "<pkgbuild.json>"); // This epic "1 liner" changes
+                                                // based on REPO_SUPPORT
       printf("Options:\n");
       printf("    -h, --help      Display this help message\n");
       printf("    -V, --version   Display version information\n");
@@ -532,6 +535,11 @@ int main(int argc, char *argv[]) {
   // case)
   if (!repo_urls[0]) {
     fprintf(stderr, "Error: repo_urls is not set\n");
+    return 1;
+  }
+
+  if (optind >= argc) { // Check if a package name is parsed through
+    fprintf(stderr, "Missing package name argument\n");
     return 1;
   }
 
