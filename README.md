@@ -4,12 +4,13 @@ PMS is essentially a minimal package manager. Okay, not really, for now, it just
 It is also the official package manager of the famous LearnixOS, the greatest distro (in production) of all time.
 ## Why make this?
 Hi I'm cowmonk, the founder and maintainer of this beauty, being a gigachad LFS user, I felt it was time to start making my own package manager, and with the firey passion to do something in C, pms came into fruition.
-My idea was simple: What makes other package managers so bad? Well, here are some of the things I compiled:
+My idea was simple: **What makes other package managers so bad?** Well, here are some of the things I compiled:
 - It's slow as hell! (I'm looking at you apt)
 - It's not intuitive enough!
 - It's not SUCKLESS! (Over engineered!)
 - and much more! I wouldn't want to get into a long rant about it.
-The main reason was #3, there are rarely any "suckless"-like package managers, so I really wanted to make one. Since we already have suckless core (I use it on my LFS system), it's time to also expand that amazing ecosystem.
+My aim is to basically do the opposite all of these, although the slowness part is definitely going to depend on hardware limitations as this is supposed to be a source based package manager (there is a way of installing binaries through changing the build json).
+However my biggest reason was #3, there are rarely any "suckless"-like package managers, so I really wanted to make one. Since we already have suckless core (I use it on my LFS system), it's time to also expand that amazing ecosystem.
 ### Where the name originates
 I have to give credit because the name pms originally came from Learnix's discord server from a **very** active member of the community, if you want to know him, you will have to 👊 SMASH 👊 THAT SUBSCRIBE BUTTON and join LearnixTV's discord server 😜.
 As also the creator of LearnixOS, although it's kinda in a perpetual shadow prison because I haven't really gotten any time because of work and among other things, pms was originally made as an idea for LearnixOS, in which was supposed to be LFS based. Of course, seeing how pms is now in LearnixOS repository, LearnixOS has moved from being LFS based, to Gentoo based, to then being Void based, to finally now being back to being LFS-based. So this is the official package manager of LearnixOS.
