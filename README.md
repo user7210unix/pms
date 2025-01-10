@@ -9,6 +9,7 @@ My idea was simple: **What makes other package managers so bad?** Well, here are
 - It's not intuitive enough!
 - It's not SUCKLESS! (Over engineered!)
 - and much more! I wouldn't want to get into a long rant about it.
+
 My aim is to basically do the opposite all of these, although the slowness part is definitely going to depend on hardware limitations as this is supposed to be a source based package manager (there is a way of installing binaries through changing the build json).
 However my biggest reason was #3, there are rarely any "suckless"-like package managers, so I really wanted to make one. Since we already have suckless core (I use it on my LFS system), it's time to also expand that amazing ecosystem.
 ### Where the name originates
