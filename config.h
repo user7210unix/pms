@@ -3,6 +3,9 @@
 
 #include <string.h>
 
+// To ask or not to ask
+static const char ask[] = "Y"; // Either Y or N.
+
 // Progress bar color
 static const unsigned long int PROGRESS_BAR_COLOR = 0xffffff;
 
