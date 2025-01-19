@@ -471,7 +471,7 @@ int check_root(void) {
   return 0;
 }
 
-int ask_conf(Package *pkg) {
+int prompt_user(Package *pkg) {
   if (strcmp(ask, "Y") == 0) {
     char askinput[100];
     printf("Package Name: %s\nPackage Version: %s\n", pkg->pkgname, pkg->version);
@@ -485,10 +485,10 @@ int ask_conf(Package *pkg) {
                 askinput[strcspn(askinput, "\n")] = '\0';
         } else {
             printf("Error reading input.\n");
-            return 1;
+            exit(0);
         }
         if (strcmp(askinput, "Y") == 0 || strcmp(askinput, "y") == 0 || strcmp(askinput, "") == 0 ) {
-            l = 2;
+            return 0;
         } else if (strcmp(askinput, "n") == 0 || strcmp(askinput, "N") == 0 ) {
             exit(0); // Quits if they say no.
         } else if (strcmp(askinput, "B") == 0 ||strcmp(askinput, "b") == 0 ) {
@@ -511,7 +511,6 @@ int ask_conf(Package *pkg) {
   }
   return 0;
 }
-
 
 int main(int argc, char *argv[]) {
   // Long name variants of commands | Moving it down here for ez of access
@@ -617,7 +616,7 @@ int main(int argc, char *argv[]) {
 
   check_root();
   
-  ask_conf(&pkg);
+  prompt_user(&pkg);
   
   fetch_sources(&pkg, quiet);
   extract_sources(&pkg, quiet);
