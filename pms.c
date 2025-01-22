@@ -1,7 +1,5 @@
 #include "config.h"
 #include "package.h"
-#include <stdio.h>
-#include <string.h>
 
 #if REPO_SUPPORT
 #include "repo.h"
@@ -473,41 +471,41 @@ int check_root(void) {
 
 int prompt_user(Package *pkg) {
   if (strcmp(ask, "Y") == 0) {
-    char askinput[100];
-    printf("Package Name: %s\nPackage Version: %s\n", pkg->pkgname, pkg->version);
-    printf("Source(s):\n");
+    char input[100];
+    printf("Package Name: %s\nPackage Version: %s\nSource(s):\n", pkg->pkgname,
+           pkg->version);
     for (size_t i = 0; i < pkg->source_count; i++)
-        printf("- %s\n", pkg->source[i]);
+      printf("- %s\n", pkg->source[i]);
+
     printf("If you wish to see the patchs, and build steps enter B.\n");
-    for (int l = 0; l < 2;) {
-        printf("Do you want to continue? (Y/n/b) ");
-        if (fgets(askinput, sizeof(askinput), stdin)) {
-                askinput[strcspn(askinput, "\n")] = '\0';
-        } else {
-            printf("Error reading input.\n");
-            exit(0);
-        }
-        if (strcmp(askinput, "Y") == 0 || strcmp(askinput, "y") == 0 || strcmp(askinput, "") == 0 ) {
-            return 0;
-        } else if (strcmp(askinput, "n") == 0 || strcmp(askinput, "N") == 0 ) {
-            exit(0); // Quits if they say no.
-        } else if (strcmp(askinput, "B") == 0 ||strcmp(askinput, "b") == 0 ) {
-            printf("\nPatches:\n");
-            for (size_t i = 0; i < pkg->patch_count; i++)
-                printf("- %s\n", pkg->patches[i]);
-            printf("Build steps:\n");
-            for (size_t i = 0; i < pkg->build_count; i++)
-                printf("- %s\n", pkg->build[i]);
-            continue;
-        } else {
-            printf("Unreconized option: %s\n", askinput);
-            continue;
-        }
+
+    for (;;) {
+      printf("Do you want to continue? (Y/n/b) ");
+      if (!fgets(input, sizeof(input), stdin)) {
+        puts("Error reading input.");
+        exit(0);
+      }
+      input[strcspn(input, "\n")] = '\0';
+
+      if (!*input || input[0] == 'Y' || input[0] == 'y')
+        return 0;
+      if (input[0] == 'n' || input[0] == 'N')
+        exit(0);
+      if (input[0] == 'B' || input[0] == 'b') {
+        printf("\nPatches:\n");
+        for (size_t i = 0; i < pkg->patch_count; i++)
+          printf("- %s\n", pkg->patches[i]);
+        printf("Build steps:\n");
+        for (size_t i = 0; i < pkg->build_count; i++)
+          printf("- %s\n", pkg->build[i]);
+      } else {
+        printf("Unrecognized option: %s\n", input);
+      }
     }
   } else if (strcmp(ask, "N") == 0) {
 
   } else {
-      printf("Error with config.h: Invalid Option for Variable ask: %s\n", ask);
+    printf("Error with config.h: Invalid Option for Variable ask: %s\n", ask);
   }
   return 0;
 }
@@ -615,9 +613,9 @@ int main(int argc, char *argv[]) {
 #endif
 
   check_root();
-  
+
   prompt_user(&pkg);
-  
+
   fetch_sources(&pkg, quiet);
   extract_sources(&pkg, quiet);
   fetch_patches(&pkg, quiet);
