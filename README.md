@@ -16,8 +16,8 @@ However my biggest reason was #3, there are rarely any "suckless"-like package m
 I have to give credit because the name pms originally came from Learnix's discord server from a **very** active member of the community, if you want to know him, you will have to 👊 SMASH 👊 THAT SUBSCRIBE BUTTON and join LearnixTV's discord server 😜.
 As also the creator of LearnixOS, although it's kinda in a perpetual shadow prison because I haven't really gotten any time because of work and among other things, pms was originally made as an idea for LearnixOS, in which was supposed to be LFS based. Of course, seeing how pms is now in LearnixOS repository, LearnixOS has moved from being LFS based, to Gentoo based, to then being Void based, to finally now being back to being LFS-based. So this is the official package manager of LearnixOS.
 ## Planned features
-- Json package builds
-  - No longer that we must SUFFER with the terrible looks and garbage looking ebuilds and PKGBUILDS from arch, and the difficulty of understanding what it really does (I'm looking at you gentoo, it's okay but I really don't like the fact you can't see what enabling USE flags will do in ebuilds). I am also hopping it makes the barrier to entry a lot easier, creating an "AUR" or "Gentoo Overlays" of some sort. Of course, for now, creating these json pkg build files are all manual, which can get annoying, which a automation of creating pkg build files will be created one day.
+- ~~Json package builds~~ TOML package builds
+  - No longer that we must SUFFER with the terrible looks and garbage looking ebuilds and PKGBUILDS from arch, and the difficulty of understanding what it really does (I'm looking at you gentoo, it's okay but I really don't like the fact you can't see what enabling USE flags will do in ebuilds). I am also hopping it makes the barrier to entry a lot easier, creating an "AUR" or "Gentoo Overlays" of some sort. In the beginning of pms, we decided to use json, but after a lot of consideration, toml is a lot more lightweight and easier to use, so we have decided to use toml instead of json and it still looks nice and human readable.
 - Minimal to the bone!
   - For now, I am trying to get the base stuff down, creating a package manager is not easy but I will try my best to follow suckless philosophy and make it easy to hack. Additionally I do want to minimize the dependencies and make sure it's as lightweight as I can, obviously, my choice in using json as the pkg build was obviously a cosmetic choice. Comments are seen throughout the project and they can help some people understand the mess of a job I am doing.
 - So easy to use, even a baby can use it!
@@ -29,7 +29,8 @@ As also the creator of LearnixOS, although it's kinda in a perpetual shadow pris
 - C libraries
 - make
 - curl
-- cjson[^1]
+- ~~cjson~~
+- tomlc99[^1]
 #### Runtime Dependencies
 - tar
 - unzip
@@ -46,35 +47,50 @@ sudo/doas make install
 ```
 It is recommended to edit the config.h like how you do with dwm. Make changes as you wish.
 # Usage
-### The pkg.json file
+### The pkg.tomlfile
 The naming scheme can be anything you desire, but to be frank, the hope is that the naming will be like this in pratice: {package_name}-{ver}.json
 Here is an example json package file for your viewing desires
-###### mypackage-1.0.0.json
-```json
-{
-  "pkgname": "mypackage",
-  "version": "1.0.0",
-  "source": ["http://example.com/mypackage-1.0.0.tar.gz"],
-  "patches": [ // This can be omitted from the file no problem, this is just optional
-    "http://example.com/nofstack.patch",
-    "http://example.com/security.patch"
-  ],
-  "build": [ // sources are extracted automatically no need for tar xvf tarbal.tar.xz or unzip
-    "cd mypackage-1.0.0", // head into the extract sources (it is automatically patched for you)
-    "./configure",
-    "make",
-    "make install"  // Placeholder - actual installation would need to be defined.
-  ],
-   "depends": ["libxyz", "libpng", "libass"]
-}
+###### mypackage-1.0.0.toml
+```toml
+title = "mypackage"
+version = "1.0.0"
+
+[build]
+sources = ["https://github.com/xyz/xyz/whatever.tar.gz"]
+patches = ["https://xyz.com/patches/veryimportantsecuritypatch.patch"]
+
+commands = [
+    "tar -xvf 1.0.0.tar.gz",
+    "cd mypackage-1.0.0",
+    "make"
+]
+
+[install]
+commands = [
+    "make install"
+]
+
+[uninstall]
+# Optional (we will implement a porg like way of uinstallation, but if the package requires it, you can add it here)
+commands = [
+    "make uninstall"
+]
+
+[dependencies]
+# Optional (if the package requires any dependencies, you can add it here)
+packages = [
+    "curl-0.0.1",
+    "tar-0.6.9",
+    "make-4.3"
+]
 ```
 ### Running pms
-For now pms is very bare, with only four arguments that you can parse to it. You can only run build scripts for now following the mypackage.json example.
+For now pms is very bare, with only four arguments that you can parse to it. You can only run build scripts for now following the mypackage.toml example.
 ```bash
 $ pms --version
 pms - Pack My Sh*t version: 0.0.1-beta
 $ pms --help
-Usage: pms [options] <pkgbuild.json>
+Usage: pms [options] <pkgbuild.toml>
 Options:
     -h, --help      Display this help message
     -v, --version   Display version information
@@ -96,6 +112,8 @@ Report any bugs and help make this project become an actual usable source based 
 ##### Current SLOC count (including header files, Dec 5, 24): ~614
 # Credits
 It's because of these projects that pms can actually function, so thanks :-)
-- [CJSON](https://github.com/DaveGamble/cJSON)
-  - "Ultralightweight JSON parser in ANSI C"
-[^1]: https://github.com/DaveGamble/cJSON
+- ~~[CJSON](https://github.com/DaveGamble/cJSON)~~
+  - ~~"Ultralightweight JSON parser in ANSI C"~~
+- [tomlc99](https://github.com/cktan/tomlc99)
+[^1]: I have decided to use tomlc99 instead of cjson, as it is more lightweight and easier to use.
+```
