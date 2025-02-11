@@ -55,7 +55,7 @@ Here is an example json package file for your viewing desires
 [package]
 
 name = "package"
-version = 1.0.0
+version = "1.0.0"
 author = "cowmonk"
 type = "curl" # or "git" for development versions (not garunteed to work)
 src = ["https://website.xyz/sources/package-1.0.0.tar.gz"]
