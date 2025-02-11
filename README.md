@@ -55,39 +55,47 @@ Here is an example json package file for your viewing desires
 [package]
 
 name = "package"
-version = 1
-author = "someone"
-type = "git"
-src = "somesite.com/something.git"
+version = 1.0.0
+author = "cowmonk"
+type = "curl" # or "git" for development versions (not garunteed to work)
+src = ["https://website.xyz/sources/package-1.0.0.tar.gz"]
 
 [patches]
 
 patches = [
-  "patch 1",
-  "patch 2",
-# and so on
+    "https://website.xyz/sources/patch1.patch",
+    "https://website.xyz/sources/patch2.patch",
+    # ... 
 ]
 
 [build]
 
+compile = {
+    "mkdir build && cd build",
+    "cmake -DCMAKE_INSTALL_PREFIX=/usr ..",
+    "make",
+    # ...
+}
+
 install = [
-  "step 1",
-  "step 2",
-# and so on
+    "install -Dm755 build/package /usr/bin/package",
+    "install -Dm644",
+    # ...
 ]
 
+# (optional)
 uninstall = [
-  "step 1",
-  "step 2",
-# and so on
+    "rm -f /usr/bin/package",
+    "rm -f /usr/lib/pkglib-*.so",
+    # ...
 ]
 
 [extra]
 
 deps = [
-  "dep 1", 
-  "dep 2",
-# and so on
+    "libXinerama-1.1.4", 
+    "gtk-3.0.0",
+    # ...
 ]
 ```
 ### Running pms
