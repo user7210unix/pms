@@ -52,36 +52,42 @@ The naming scheme can be anything you desire, but to be frank, the hope is that 
 Here is an example json package file for your viewing desires
 ###### mypackage-1.0.0.toml
 ```toml
-title = "mypackage"
-version = "1.0.0"
+[package]
+
+name = "package"
+version = 1
+author = "someone"
+type = "git"
+src = "somesite.com/something.git"
+
+[patches]
+
+patches = [
+  "patch 1",
+  "patch 2",
+# and so on
+]
 
 [build]
-sources = ["https://github.com/xyz/xyz/whatever.tar.gz"]
-patches = ["https://xyz.com/patches/veryimportantsecuritypatch.patch"]
 
-commands = [
-    "tar -xvf 1.0.0.tar.gz",
-    "cd mypackage-1.0.0",
-    "make"
+install = [
+  "step 1",
+  "step 2",
+# and so on
 ]
 
-[install]
-commands = [
-    "make install"
+uninstall = [
+  "step 1",
+  "step 2",
+# and so on
 ]
 
-[uninstall]
-# Optional (we will implement a porg like way of uinstallation, but if the package requires it, you can add it here)
-commands = [
-    "make uninstall"
-]
+[extra]
 
-[dependencies]
-# Optional (if the package requires any dependencies, you can add it here)
-packages = [
-    "curl-0.0.1",
-    "tar-0.6.9",
-    "make-4.3"
+deps = [
+  "dep 1", 
+  "dep 2",
+# and so on
 ]
 ```
 ### Running pms
