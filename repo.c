@@ -1,11 +1,11 @@
 #include "repo.h"
 
+#include "config.h"
 #include <curl/curl.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "config.h"
 
 static Repository *repositories = NULL; // Array of repositories
 static size_t repo_count = 0;
@@ -154,79 +154,120 @@ int find_latest_version_file(const char *package_name,
 // Search for a package across all repositories
 int search_all_repos(const char *package_name, const char *version,
                      Package *pkg) {
-  for (size_t i = 0; i < repo_count; ++i) {
+  for (size_t i = 0; i < repo_count; i++) {
     Repository *repo = &repositories[i];
 
-    // Construct the expected package directory path
-    size_t pkg_dir_len = strlen(repo_dir) + strlen(repo->name) +
-                         strlen(package_name) + 3; // +3 for two / and \0
-    char *pkg_dir = malloc(pkg_dir_len);
-    if (!pkg_dir) {
-      fprintf(stderr, "Memory allocation failed: pkg_dir\n");
+    // Get the repo base directory
+    size_t repo_base_len = strlen(repo_dir) + strlen(repo->name) + 2;
+    char *repo_base = malloc(repo_base_len);
+    if (!repo_base) {
+      fprintf(stderr, "Memory allocation failed: repo_base\n");
       return 1;
     }
-    snprintf(pkg_dir, pkg_dir_len, "%s/%s/%s", repo_dir, repo->name,
-             package_name);
+    snprintf(repo_base, repo_base_len, "%s/%s", repo_dir, repo->name);
 
-    char latest_version_file[FILENAME_MAX];
-    if (version == NULL) {
-      // Find the latest version
-      if (find_latest_version_file(package_name, latest_version_file,
-                                   sizeof(latest_version_file), pkg_dir) == 0) {
-        // Construct the full path to the latest version file
-        size_t filepath_len = strlen(pkg_dir) + strlen(latest_version_file) + 2;
-        char *filepath = malloc(filepath_len);
-        if (!filepath) { // Debugging purposes
-          fprintf(stderr, "Memory allocation failed: filepath\n");
+    // Open the repo directory to list categories
+    DIR *repo_dir_handle = opendir(repo_base);
+    if (!repo_dir_handle) {
+      fprintf(stderr, "Failed to open repo directory: %s\n", repo_base);
+      free(repo_base);
+      return 1;
+    }
+
+    struct dirent *category_entry;
+    while ((category_entry = readdir(repo_dir_handle)) != NULL) {
+      if (category_entry->d_type != DT_DIR ||
+          strcmp(category_entry->d_name, ".") == 0 ||
+          strcmp(category_entry->d_name, "..") == 0) {
+        continue;
+      }
+
+      // Construct path to package within category
+      size_t pkg_dir_len = repo_base_len + strlen(category_entry->d_name) +
+                           strlen(package_name) + 3;
+      char *pkg_dir = malloc(pkg_dir_len);
+      if (!pkg_dir) {
+        fprintf(stderr, "Memory allocation failed: pkg_dir\n");
+        free(repo_base);
+        closedir(repo_dir_handle);
+        return 1;
+      }
+      snprintf(pkg_dir, pkg_dir_len, "%s/%s/%s", repo_base,
+               category_entry->d_name, package_name);
+
+      char latest_version_file[FILENAME_MAX];
+      if (!version) {
+        if (!find_latest_version_file(package_name, latest_version_file,
+                                      sizeof(latest_version_file), pkg_dir)) {
+
+          size_t filepath_len =
+              strlen(pkg_dir) + strlen(latest_version_file) + 2;
+          char *filepath = malloc(filepath_len);
+          if (!filepath) {
+            fprintf(stderr, "Memory allocation failed: filepath\n");
+            free(pkg_dir);
+            free(repo_base);
+            closedir(repo_dir_handle);
+            return 1;
+          }
+
+          snprintf(filepath, filepath_len, "%s/%s", pkg_dir,
+                   latest_version_file);
+
+          int result = parse_pkgbuild(filepath, pkg);
+          if (result == 0) {
+            free(filepath);
+            free(pkg_dir);
+            free(repo_base);
+            closedir(repo_dir_handle);
+            return 0; // Successfully found and parsed
+          }
+          free(filepath);
+        }
+      } else {
+        size_t filename_len = strlen(package_name) + strlen(version) + 7;
+        char *filename = malloc(filename_len);
+        if (!filename) {
+          fprintf(stderr, "Memory allocation failed: filename\n");
           free(pkg_dir);
+          free(repo_base);
+          closedir(repo_dir_handle);
           return 1;
         }
 
-        snprintf(filepath, filepath_len, "%s/%s", pkg_dir, latest_version_file);
+        snprintf(filename, filename_len, "%s-%s.json", package_name, version);
 
-        if (parse_pkgbuild(filepath, pkg) == 0) {
-          free(filepath);
+        size_t filepath_len = strlen(pkg_dir) + strlen(filename) + 2;
+        char *filepath = malloc(filepath_len);
+        if (!filepath) {
+          fprintf(stderr, "Memory allocation failed: filepath\n");
           free(pkg_dir);
-          return 0;
+          free(filename);
+          free(repo_base);
+          closedir(repo_dir_handle);
+          return 1;
         }
-        free(filepath);
-      }
-    } else {
-      // Use the specified version
-      size_t filename_len =
-          strlen(package_name) + strlen(version) + strlen(".json") + 2;
-      char *filename = malloc(filename_len);
 
-      if (!filename) { // Debugging
-        fprintf(stderr, "Memory allocation failed: filename\n");
-        free(pkg_dir);
-        return 1;
-      }
+        snprintf(filepath, filepath_len, "%s/%s", pkg_dir, filename);
 
-      snprintf(filename, filename_len, "%s-%s.json", package_name, version);
+        int result = parse_pkgbuild(filepath, pkg);
+        if (result == 0) {
+          free(filepath);
+          free(filename);
+          free(pkg_dir);
+          free(repo_base);
+          closedir(repo_dir_handle);
+          return 0; // Successfully found and parsed
+        }
 
-      size_t filepath_len = strlen(pkg_dir) + strlen(filename) + 2;
-      char *filepath = malloc(filepath_len);
-      if (!filepath) { // Debugging
-        fprintf(stderr, "Memory allocation failed: filepath\n");
-        free(pkg_dir);
-        free(filename);
-        return 1;
-      }
-
-      snprintf(filepath, filepath_len, "%s/%s", pkg_dir, filename);
-
-      if (parse_pkgbuild(filepath, pkg) == 0) {
         free(filepath);
         free(filename);
-        free(pkg_dir);
-        return 0; // Package found
       }
-
-      free(filepath);
-      free(filename);
+      free(pkg_dir);
     }
-    free(pkg_dir);
+
+    free(repo_base);
+    closedir(repo_dir_handle);
   }
 
   return 1; // Package not found

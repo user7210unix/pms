@@ -469,6 +469,47 @@ int check_root(void) {
   return 0;
 }
 
+int prompt_user(Package *pkg) {
+  if (strcmp(ask, "Y") == 0) {
+    char input[100];
+    printf("Package Name: %s\nPackage Version: %s\nSource(s):\n", pkg->pkgname,
+           pkg->version);
+    for (size_t i = 0; i < pkg->source_count; i++)
+      printf("- %s\n", pkg->source[i]);
+
+    printf("If you wish to see the patchs, and build steps enter B.\n");
+
+    for (;;) {
+      printf("Do you want to continue? (Y/n/b) ");
+      if (!fgets(input, sizeof(input), stdin)) {
+        puts("Error reading input.");
+        exit(0);
+      }
+      input[strcspn(input, "\n")] = '\0';
+
+      if (!*input || input[0] == 'Y' || input[0] == 'y')
+        return 0;
+      if (input[0] == 'n' || input[0] == 'N')
+        exit(0);
+      if (input[0] == 'B' || input[0] == 'b') {
+        printf("\nPatches:\n");
+        for (size_t i = 0; i < pkg->patch_count; i++)
+          printf("- %s\n", pkg->patches[i]);
+        printf("Build steps:\n");
+        for (size_t i = 0; i < pkg->build_count; i++)
+          printf("- %s\n", pkg->build[i]);
+      } else {
+        printf("Unrecognized option: %s\n", input);
+      }
+    }
+  } else if (strcmp(ask, "N") == 0) {
+
+  } else {
+    printf("Error with config.h: Invalid Option for Variable ask: %s\n", ask);
+  }
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
   // Long name variants of commands | Moving it down here for ez of access
   static const struct option long_options[] = {
@@ -572,6 +613,8 @@ int main(int argc, char *argv[]) {
 #endif
 
   check_root();
+
+  prompt_user(&pkg);
 
   fetch_sources(&pkg, quiet);
   extract_sources(&pkg, quiet);

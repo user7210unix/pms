@@ -123,7 +123,7 @@ neofetch-7.1.0/neofetch
 neofetch-7.1.0/neofetch.1
 ```
 Report any bugs and help make this project become an actual usable source based package manager!
-##### Current SLOC count (including header files, Dec 5, 24): ~614
+##### Current SLOC count (including header files, Dec 5, 24): ~653
 # Credits
 It's because of these projects that pms can actually function, so thanks :-)
 - ~~[CJSON](https://github.com/DaveGamble/cJSON)~~
