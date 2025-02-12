@@ -24,7 +24,6 @@ options:
 	@echo "CC          = $(CC)"
 
 clean:
-	@rm -f $(PREFIX)/bin/$(TARGET)
 	@rm -f $(TARGET)
 
 install:
