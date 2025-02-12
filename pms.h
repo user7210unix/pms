@@ -43,3 +43,5 @@ typedef struct {
 /* Function prototypes */
 int parsetoml(const char *filename, Toml *toml);
 void freetoml(Toml *toml);
+
+static int execute(const char *cmd);

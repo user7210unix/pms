@@ -144,38 +144,35 @@ parsetoml(const char *file, Toml *t)
         val = toml_table_string(pkg, "version");
         if (!val.ok)
                 goto error;
-        t->pkg.version = strdup(val.u.s);
-        free(val.u.s);
+        t->pkg.version = val.u.s;
 
         val = toml_table_string(pkg, "author");
         if (val.ok) {
-                t->pkg.author = strdup(val.u.s);
-                free(val.u.s);
+                t->pkg.author = val.u.s;
         }
 
         val = toml_table_string(pkg, "type");
         if (val.ok) {
-                t->pkg.type = strdup(val.u.s);
-                free(val.u.s);
+                t->pkg.type = val.u.s;
         }
 
         /* parse arrays */
         arr = toml_table_array(pkg, "source");
-        if (arr && tomlgetarray(arr, &t->pkg.src, &t->pkg.nsrc) < 0)
+        if (!arr || tomlgetarray(arr, &t->pkg.src, &t->pkg.nsrc) < 0)
                 goto error;
 
         arr = toml_table_array(pkg, "depends");
-        if (arr && tomlgetarray(arr, &t->deps.deps, &t->deps.ndeps) < 0)
+        if (!arr || tomlgetarray(arr, &t->deps.deps, &t->deps.ndeps) < 0)
                 goto error;
 
         /* parse build section */
         if ((build = toml_table_table(conf, "build"))) {
                 arr = toml_table_array(build, "compile");
-                if (arr && tomlgetarray(arr, &t->build.compile, &t->build.ncompile) < 0)
+                if (!arr || tomlgetarray(arr, &t->build.compile, &t->build.ncompile) < 0)
                         goto error;
 
                 arr = toml_table_array(build, "install");
-                if (arr && tomlgetarray(arr, &t->build.install, &t->build.ninstall) < 0)
+                if (!arr || tomlgetarray(arr, &t->build.install, &t->build.ninstall) < 0)
                         goto error;
 
                 /* optional uninstall parameter */

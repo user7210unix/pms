@@ -31,6 +31,6 @@ static const int maxretries = 3;        /* max download retries */
 static const int timeout = 30;          /* connection timeout in seconds */
 
 /* paths */
-static const char *shell = "/bin/sh";   /* shell for executing commands */
-static const char *patch = "patch";     /* patch command */
-static const char *git = "git";         /* git command */
+static const char shell[] = "/bin/sh";   /* shell for executing commands */
+static const char patch[] = "patch";     /* patch command */
+static const char git[] = "git";         /* git command */

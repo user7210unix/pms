@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-// #include "../config.h"
+#include "../config.h"
 
 /* A static file pointer to our log file */
 static FILE *log_file = NULL;

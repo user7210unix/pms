@@ -1,7 +1,4 @@
-/* See LICENSE file for license details.
- *
- * repo.h
- */
+/* See LICENSE file for license details. */
 
 /* repository struct */
 typedef struct {
