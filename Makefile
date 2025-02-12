@@ -4,14 +4,18 @@
 include config.mk
 
 pms: pms.o repo.o
-	$(CC) $(CFLAGS) $(INCLUDES) pms.o repo.o -o $(TARGET) $(LDFLAGS) -lcjson -lcurl
-	@rm pms.o repo.o
+	$(CC) $(CFLAGS) $(INCLUDES) pms.o -o $(TARGET) $(LDFLAGS) -ltoml -lcurl
+	@rm pms.o
+
+config.h:
+	cp config.def.h $@
 
 pms.o: pms.c config.h
 	$(CC) $(CFLAGS) -c pms.c
 
 repo.o: repo.c repo.h config.h
-	$(CC) $(CFLAGS) -c repo.c
+	# $(CC) $(CFLAGS) -c repo.c
+	@echo "repo.c is not implemented yet"
 
 options:
 	@echo pms build options:
