@@ -1,4 +1,3 @@
-# Pack My Sh*t
 ## What is PMS?
 PMS is essentially a minimal package manager. Okay, not really, for now, it just runs basic build scripts in the form of a .json.
 It is also the official package manager of the famous LearnixOS, the greatest distro (in production) of all time.
