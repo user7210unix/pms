@@ -1,9 +1,8 @@
-# pms - pack my sh*t
 # See LICENSE file for copyright and license details.
 
 include config.mk
 
-pms: pms.o repo.o
+pms: pms.o
 	$(CC) $(CFLAGS) $(INCLUDES) pms.o -o $(TARGET) $(LDFLAGS) -ltoml -lcurl
 	@rm pms.o
 
